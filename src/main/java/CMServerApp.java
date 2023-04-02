@@ -1,4 +1,4 @@
-import kr.ac.konkuk.ccslab.cm.*;
+import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 public class CMServerApp {
     private CMServerStub m_serverStub;
@@ -8,7 +8,7 @@ public class CMServerApp {
         m_serverStub = new CMServerStub();
         m_eventHandler = new CMServerEventHandler(m_serverStub);
     }
-    public CMServerStub getM_serverStub()   {
+    public CMServerStub getServerStub()   {
         return m_serverStub;
     }
 
