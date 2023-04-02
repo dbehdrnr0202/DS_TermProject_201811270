@@ -1,6 +1,10 @@
 import kr.ac.konkuk.ccslab.cm.*;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 
+import javax.imageio.IIOException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Scanner;
 
 public class CMClientApp {
@@ -41,9 +45,19 @@ public class CMClientApp {
         }
         //
         System.out.print("Enter user name: ");
-        userName = scanner.nextLine();
-        System.out.print("Enter password: ");
-        userPassword = scanner.nextLine();
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        try{
+            userName = br.readLine();
+            if (console==null)  {
+                System.out.print("Enter password: ");
+                userPassword = br.readLine();
+            }
+            else
+                userPassword = new String(console.readPassword("password: "));
+        }
+        catch (IOException e)  {
+            e.printStackTrace();
+        }
         //
         System.out.println("user name: "+userName);
         System.out.println("password: "+userPassword);
