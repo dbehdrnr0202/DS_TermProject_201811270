@@ -1,4 +1,3 @@
-import kr.ac.konkuk.ccslab.cm.*;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 
@@ -35,7 +34,8 @@ public class CMClientApp {
     public static void main(String[] args)  {
         CMClientApp client = new CMClientApp();
         CMClientStub cmStub = client.getClientStub();
-        cmStub.setAppEventHandler(client.getClientEventHandler());//여기가 왜?
+        CMClientEventHandler eventHandler = client.getClientEventHandler();
+        cmStub.setAppEventHandler(eventHandler);//여기가 왜?
         /*
         * Provided: CMClientEventHandler
         * required:  CMAppEventHandler
@@ -58,6 +58,7 @@ public class CMClientApp {
         Scanner m_scan = new Scanner(System.in);
         String strInput = null;
         int nCommand = -1;
+        boolean m_bRun = false;
         while(m_bRun) {
             System.out.println("Type \"0\" for menu.");
             System.out.print("> ");

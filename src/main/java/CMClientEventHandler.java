@@ -1,4 +1,5 @@
 import kr.ac.konkuk.ccslab.cm.entity.CMSessionInfo;
+import kr.ac.konkuk.ccslab.cm.event.handler.CMAppEventHandler;
 import kr.ac.konkuk.ccslab.cm.event.handler.CMEventHandler;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 import kr.ac.konkuk.ccslab.cm.info.*;
@@ -6,7 +7,7 @@ import kr.ac.konkuk.ccslab.cm.event.*;
 
 import java.util.Iterator;
 
-public class CMClientEventHandler implements CMEventHandler {
+public class CMClientEventHandler implements CMAppEventHandler {
     private CMClientStub m_clientStub;
     public CMClientEventHandler(CMClientStub stub) {
         m_clientStub = stub;
@@ -16,6 +17,21 @@ public class CMClientEventHandler implements CMEventHandler {
         switch(cme.getType()) {
             case CMInfo.CM_SESSION_EVENT:
                 processSessionEvent(cme);
+                break;
+            case CMInfo.CM_DATA_EVENT:
+                processDataEvent(cme);
+                break;
+            case CMInfo.CM_DUMMY_EVENT:
+                processDummyEvent(cme);
+                break;
+            case CMInfo.CM_USER_EVENT:
+                processUserEvent(cme);
+                break;
+            case CMInfo.CM_FILE_EVENT:
+                processFileEvent(cme);
+                break;
+            case CMInfo.CM_FILE_SYNC_EVENT:
+                processFileSyncEvent(cme);
                 break;
             default:
                 return;
@@ -37,18 +53,18 @@ public class CMClientEventHandler implements CMEventHandler {
     private  void processLOGIN_ACK(CMSessionEvent se)   {
         //0: user authentication failed
         if(se.isValidUser() == 0)   {
-            System.err.println("This client fails authentication by the default server!");
+            System.err.println("[SESSION_EVENT]This client fails authentication by the default server!");
         }
         //-1: same user already logged in
         else if(se.isValidUser() == -1) {
-            System.err.println("This client is already in the login-user list!");
+            System.err.println("[SESSION_EVENT]This client is already in the login-user list!");
         }
-        //1: valied user
+        //1: valid user
         else if (se.isValidUser()==1){
-            System.out.println("This client successfully logs in to the default server.");
+            System.out.println("[SESSION_EVENT]This client successfully logs in to the default server.");
         }
         else {
-            System.err.println("Wrong isValidUser() rtn.");
+            System.err.println("[SESSION_EVENT]Wrong isValidUser() rtn.");
         }
 
     }
@@ -63,5 +79,60 @@ public class CMClientEventHandler implements CMEventHandler {
             System.out.format("%-20s%-20s%-10d%-10d%n", tInfo.getSessionName(), tInfo.getAddress(), tInfo.getPort(), tInfo.getUserNum());
         }
     }
+    private void processDataEvent(CMEvent se)    {
+        CMDataEvent de = (CMDataEvent)se;
+        switch (de.getID()) {
+            case CMDataEvent.NEW_USER:
+                System.out.println("[DATA_EVENT]New_User "+de.getUserName()+" joins the group "+de.getHandlerGroup()+"in Session "+de.getHandlerSession());
+                break;
+            case CMDataEvent.REMOVE_USER:
+                System.out.println("[DATA_EVENT]User "+de.getUserName()+" left the group "+de.getHandlerGroup()+"in Session "+de.getHandlerSession());
+                break;
+            default:
+                return;
+        }
+    }
+    private void processDummyEvent(CMEvent cme) {
+        CMDummyEvent de = (CMDummyEvent)cme;
+        System.out.println("[DUMMY_EVENT]Dummy msg "+de.getDummyInfo()+"from user"+de.getSender());
+        return;
+    }
+
+    private void processUserEvent(CMEvent cme)  {
+        CMUserEvent ue = (CMUserEvent) cme;
+        switch (ue.getStringID())   {
+            case "userInfo":
+                System.out.println("[USER_EVENT]ID: "+ue.getStringID());
+                String name = ue.getEventField(CMInfo.CM_STR, "name");
+                int age = Integer.parseInt(ue.getEventField(CMInfo.CM_INT, "age"));
+                double weight = Double.parseDouble(ue.getEventField(CMInfo.CM_DOUBLE, "weight"));
+                System.out.println("Field value: name: "+name);
+                System.out.println("Field value: age: "+age);
+                System.out.println("Field value: weight: "+weight);
+                break;
+            default:
+                System.err.println("[USER_EVENT]unknown CMUserEvent ID: "ue.getStringID());
+        }
+    }
+    private void processFileEvent(CMEvent cme)  {
+        CMFileEvent fe = (CMFileEvent) cme;
+        switch (fe.getID()) {
+            case CMFileEvent.END_FILE_TRANSFER:
+
+                break;
+            case CMFileEvent.END_FILE_TRANSFER_ACK:
+
+                break;
+            case CMFileEvent.END_FILE_TRANSFER_CHAN:
+
+                break;
+            case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
+
+                break;
+            default:
+                break;
+        }
+    }
+
 }
 
