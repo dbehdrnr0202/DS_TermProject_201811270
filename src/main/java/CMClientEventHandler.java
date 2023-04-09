@@ -30,9 +30,6 @@ public class CMClientEventHandler implements CMAppEventHandler {
             case CMInfo.CM_FILE_EVENT:
                 processFileEvent(cme);
                 break;
-            case CMInfo.CM_FILE_SYNC_EVENT:
-                processFileSyncEvent(cme);
-                break;
             default:
                 return;
         }
@@ -83,10 +80,10 @@ public class CMClientEventHandler implements CMAppEventHandler {
         CMDataEvent de = (CMDataEvent)se;
         switch (de.getID()) {
             case CMDataEvent.NEW_USER:
-                System.out.println("[DATA_EVENT]New_User "+de.getUserName()+" joins the group "+de.getHandlerGroup()+"in Session "+de.getHandlerSession());
+                System.out.println("[DATA_EVENT]New_User "+de.getUserName()+" joins the group "+de.getHandlerGroup()+" in "+de.getHandlerSession());
                 break;
             case CMDataEvent.REMOVE_USER:
-                System.out.println("[DATA_EVENT]User "+de.getUserName()+" left the group "+de.getHandlerGroup()+"in Session "+de.getHandlerSession());
+                System.out.println("[DATA_EVENT]User "+de.getUserName()+" left the group "+de.getHandlerGroup()+" in "+de.getHandlerSession());
                 break;
             default:
                 return;
@@ -94,7 +91,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
     }
     private void processDummyEvent(CMEvent cme) {
         CMDummyEvent de = (CMDummyEvent)cme;
-        System.out.println("[DUMMY_EVENT]Dummy msg "+de.getDummyInfo()+"from user"+de.getSender());
+        System.out.println("[DUMMY_EVENT]Dummy msg "+de.getDummyInfo()+" from user"+de.getSender());
         return;
     }
 
@@ -111,12 +108,20 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 System.out.println("Field value: weight: "+weight);
                 break;
             default:
-                System.err.println("[USER_EVENT]unknown CMUserEvent ID: "ue.getStringID());
+                System.err.println("[USER_EVENT]unknown CMUserEvent ID: "+ue.getStringID());
         }
     }
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
         switch (fe.getID()) {
+            case CMFileEvent.REPLY_PERMIT_PULL_FILE:
+                if(fe.getReturnCode() == -1) {
+                    System.err.print("[FILE_EVENT]"+fe.getFileName()+" does not exist in the owner!\n");
+                }
+                else if(fe.getReturnCode() == 0) {
+                    System.err.print("[FILE_EVENT]"+fe.getFileSender()+" rejects to send file("+fe.getFileName()+").\n");
+                }
+                break;
             case CMFileEvent.END_FILE_TRANSFER:
 
                 break;
@@ -124,10 +129,11 @@ public class CMClientEventHandler implements CMAppEventHandler {
 
                 break;
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
+                System.out.println("[FILE_EVENT]"+fe.getFileSender()+" completes to send file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) to "+fe.getFileReceiver());
 
                 break;
             case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
-
+                System.out.println("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from " +fe.getFileSender());
                 break;
             default:
                 break;
