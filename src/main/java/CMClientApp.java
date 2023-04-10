@@ -4,16 +4,20 @@ import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 import kr.ac.konkuk.ccslab.cm.manager.CMFileTransferManager;
 
 import javax.imageio.IIOException;
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.io.File;
 import java.util.List;
 import java.util.Scanner;
 
 public class CMClientApp {
     private CMClientStub m_clientStub;
     private CMClientEventHandler m_eventHandler;
+    private Scanner m_scanner;
     private boolean m_bRun;
 
 
@@ -34,6 +38,7 @@ public class CMClientApp {
     public CMClientApp(){
         m_clientStub = new CMClientStub();
         m_eventHandler = new CMClientEventHandler(m_clientStub);
+        m_scanner = new Scanner((System.in));
     }
     public CMClientStub getClientStub() {
         return m_clientStub;
@@ -76,9 +81,11 @@ public class CMClientApp {
                     printAllMenus();
                     break;
                 //start, terminate cm
+                /*
                 case STARTCM:
                     startCM();
                     break;
+                */
                 case TERMINATECM:
                     terminateCM();
                     break;
@@ -111,8 +118,8 @@ public class CMClientApp {
     public void printAllMenus() {
         System.out.println("Print All Menu: "+PRINTALLMENU);
         System.out.println("====About CM===");
-        System.out.println("Start CM: "+STARTCM);
-        System.out.println("Terminate CM0: "+TERMINATECM);
+        //System.out.println("Start CM: "+STARTCM);
+        System.out.println("Terminate CM: "+TERMINATECM);
         System.out.println("====About Log In/Out===");
         System.out.println("Log In: "+LOGIN);
         System.out.println("Log Out: "+LOGOUT);
@@ -272,7 +279,7 @@ public class CMClientApp {
         try {
             System.out.print("File name: ");
             strFileName = br.readLine();
-            System.out.print("File owner: ");
+            System.out.print("File owner(server name): ");
             strFileOwner = br.readLine();
         } catch (IOException e) {
             e.printStackTrace();
@@ -288,6 +295,34 @@ public class CMClientApp {
         String strFilePath = null;
         String strReceiver = null;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        Path transferHome = m_clientStub.getTransferedFileHome();
+        JFileChooser fc = new JFileChooser();
+        fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        fc.setMultiSelectionEnabled(true);
+        fc.setCurrentDirectory(transferHome.toFile());
+        int fcRet = fc.showOpenDialog(null);
+        if(fcRet != JFileChooser.APPROVE_OPTION) return;
+        File[] files = fc.getSelectedFiles();
+
+        for(File file : files)
+            System.out.println("selected file = " + file);
+        if(files.length < 1) {
+            System.err.println("No file selected!");
+            return;
+        }
+        System.out.println("Receiver of files: ");
+        System.out.println("Type \"SERVER\" for the server or \"mlim\" for client receiver.");
+        System.out.println("For \"mlim\", you must run CMClientFile before the file transfer.");
+        String receiver = m_scanner.nextLine().trim();
+        boolean b_rtn = false;
+        // send files
+        for(File file : files) {
+            String filePath = file.getPath();
+            b_rtn = m_clientStub.pushFile(filePath, receiver);
+            if (b_rtn)
+                System.out.println("File Name: ["+file.getName()+"] pushed successfully");
+        }
+        /*
         System.out.println("====== push a file");
         try {
             System.out.print("File path name: ");
@@ -302,6 +337,8 @@ public class CMClientApp {
             System.out.println("[pushFile] success");
         else
             System.err.println("[pushFile] failed");
+
+         */
     }
     public void pushFiles() {
         String[] strFiles = null;
@@ -360,4 +397,5 @@ public class CMClientApp {
 
         return;
     }
+
 }

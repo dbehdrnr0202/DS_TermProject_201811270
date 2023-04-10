@@ -113,7 +113,15 @@ public class CMClientEventHandler implements CMAppEventHandler {
     }
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
+        System.out.println("[processFileEvent]"+fe.getID());
         switch (fe.getID()) {
+            case CMFileEvent.REQUEST_PERMIT_PULL_FILE:
+                String strReq = "["+fe.getFileReceiver()+"] requests file("+fe.getFileName()+
+                        ").\n";
+                System.out.print(strReq);
+                m_clientStub.replyEvent(fe, 1);
+                break;
+            //Checking out the result of the file transfer request
             case CMFileEvent.REPLY_PERMIT_PULL_FILE:
                 if(fe.getReturnCode() == -1) {
                     System.err.print("[FILE_EVENT]"+fe.getFileName()+" does not exist in the owner!\n");

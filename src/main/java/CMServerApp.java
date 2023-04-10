@@ -5,6 +5,7 @@ import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -17,6 +18,10 @@ public class CMServerApp {
     private final int STARTCM = 1;
     private final int TERMINATECM = 9;
     private final int PRINTCURRENTUSERS = 3;
+    private final int SETFILEPATH = 4;
+    private final int PUSHFILE = 61;
+    private final int REQUESTFILE = 60;
+
 
     public CMServerApp()    {
         m_serverStub = new CMServerStub();
@@ -83,11 +88,21 @@ public class CMServerApp {
                     startCM();
                     break;
                 */
+                case SETFILEPATH:
+                    setFilePath();
+                    break;
                 case PRINTCURRENTUSERS:
                     printCurrentUsers();
                     break;
                 case TERMINATECM:
                     terminateCM();
+                    break;
+
+                case REQUESTFILE:
+                    requestFile();
+                    break;
+                case PUSHFILE:
+                    pushFile();
                     break;
                 default:
                     break;
@@ -96,7 +111,6 @@ public class CMServerApp {
     }
     public void printAllMenus() {
         System.out.println("Print All Menu: "+PRINTALLMENU);
-        System.out.println("Start CM: "+STARTCM);
         System.out.println("Print Current Users: "+PRINTCURRENTUSERS);
         System.out.println("Terminate CM: "+TERMINATECM);
     }
@@ -116,5 +130,58 @@ public class CMServerApp {
             System.out.println("Member#"+(uCnt++)+": "+uTemp.getName());
         }
     }
+    public void setFilePath() {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("====== set file path");
+        String strPath = null;
+        System.out.print("file path: ");
+        try {
+            strPath = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        m_serverStub.setTransferedFileHome(Paths.get(strPath));
+        System.out.println("======");
+    }
 
+    public void requestFile()   {
+        String strFileName = null;
+        String strFileOwner = null;
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("====== request a file");
+        try {
+            System.out.print("File name: ");
+            strFileName = br.readLine();
+            System.out.print("File owner(user name): ");
+            strFileOwner = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        boolean bReturn = m_serverStub.requestFile(strFileName, strFileOwner);
+        if(!bReturn)
+            System.err.println("Request file error! file("+strFileName+"), owner("+strFileOwner+").");
+
+        System.out.println("======");
+    }
+    public void pushFile()  {
+        boolean bReturn = false;
+        String strFilePath = null;
+        String strReceiver = null;
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("====== push a file");
+
+        try {
+            System.out.print("File path name: ");
+            strFilePath = br.readLine();
+            System.out.print("File receiver (user name): ");
+            strReceiver = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        bReturn = m_serverStub.pushFile(strFilePath, strReceiver);
+        if(!bReturn)
+            System.err.println("Push file error! file("+strFilePath+"), receiver("+strReceiver+")");
+
+        System.out.println("======");
+    }
 }
