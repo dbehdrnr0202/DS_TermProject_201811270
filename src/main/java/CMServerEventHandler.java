@@ -55,7 +55,7 @@ public class CMServerEventHandler implements CMAppEventHandler {
     }
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
-        printMsg("[processFileEvent]"+fe.getID());
+        System.out.println("[processFileEvent]"+fe.getID());
         switch (fe.getID()) {
             case CMFileEvent.REPLY_PERMIT_PULL_FILE:
                 if(fe.getReturnCode() == -1) {

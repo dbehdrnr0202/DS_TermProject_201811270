@@ -1,3 +1,5 @@
+import kr.ac.konkuk.ccslab.cm.entity.CMMember;
+import kr.ac.konkuk.ccslab.cm.entity.CMUser;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
 import kr.ac.konkuk.ccslab.cm.manager.CMCommManager;
 import kr.ac.konkuk.ccslab.cm.manager.CMConfigurator;
@@ -6,8 +8,12 @@ import kr.ac.konkuk.ccslab.cm.manager.CMFileTransferManager;
 
 import javax.imageio.IIOException;
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.text.*;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -18,8 +24,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.io.File;
+import java.util.*;
 import java.util.List;
-import java.util.Scanner;
 
 public class CMClientApp extends JFrame {
     private CMClientStub m_clientStub;
@@ -40,10 +46,10 @@ public class CMClientApp extends JFrame {
     private final int LOGOUT = 22;
 
     private final int REQUEST_SESSION_INFO = 3;
+    private final int REQUEST_CURRENT_GROUP_MEMEBERS =31;
 
     private final int REQUEST_FILE = 60;
     private final int PUSH_FILE = 61;
-    private final int PUSH_FILES = 62;
 
     public void printMsg(String strText) {
         printStyledMsg(strText, null);
@@ -115,6 +121,9 @@ public class CMClientApp extends JFrame {
             case REQUEST_SESSION_INFO:
                 requestSessionInfo();
                 break;
+            case REQUEST_CURRENT_GROUP_MEMEBERS:
+                requestCurrentGroupMembers();
+                break;
             //file transmission
             case REQUEST_FILE:
                 requestFile();
@@ -122,13 +131,10 @@ public class CMClientApp extends JFrame {
             case PUSH_FILE:
                 pushFile();
                 break;
-            case PUSH_FILES:
-                pushFiles();
-                break;
             default:
         }
     }
-    public class MyActionListener implements ActionListener {
+    public class MyActionListener implements ActionListener, ListSelectionListener {
         public void actionPerformed(ActionEvent e)
         {
             JButton button = (JButton) e.getSource();
@@ -156,6 +162,15 @@ public class CMClientApp extends JFrame {
                 printMsg("Client CM terminates.\n");
                 // change button to "start CM"
                 button.setText("Start Client CM");
+            }
+        }
+        public void valueChanged(ListSelectionEvent e)  {
+            JList list = (JList) e.getSource();
+            if (list.getSelectedIndex()!=-1)    {
+                String strToCopy = (String)list.getSelectedValue();
+                StringSelection str = new StringSelection(strToCopy);
+                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                clipboard.setContents(str, null);
             }
         }
     }
@@ -260,15 +275,15 @@ public class CMClientApp extends JFrame {
                 case REQUEST_SESSION_INFO:
                     requestSessionInfo();
                     break;
+                case REQUEST_CURRENT_GROUP_MEMEBERS:
+                    requestCurrentGroupMembers();
+                    break;
                 //file transmission
                 case REQUEST_FILE:
                     requestFile();
                     break;
                 case PUSH_FILE:
                     pushFile();
-                    break;
-                case PUSH_FILES:
-                    pushFiles();
                     break;
                 default:
             }
@@ -278,7 +293,6 @@ public class CMClientApp extends JFrame {
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
         printMsgln("====About CM===");
-        //printMsgln("Start CM: "+STARTCM);
         printMsgln("Terminate CM: "+TERMINATECM);
         printMsgln("====About Log In/Out===");
         printMsgln("Log In: "+LOGIN);
@@ -288,49 +302,8 @@ public class CMClientApp extends JFrame {
         printMsgln("====About File===");
         printMsgln("Request File: "+REQUEST_FILE);
         printMsgln("Push File: "+PUSH_FILE);
-        printMsgln("Push Files: "+PUSH_FILES);
     }
     public void startCM()   {
-        /*
-        List<String> localAddressList = CMCommManager.getLocalIPList();
-        if(localAddressList == null) {
-            System.err.println("Local address not found!");
-            return;
-        }
-        String strCurrentLocalAddress = localAddressList.get(0).toString();
-
-        // get the saved server info from the server configuration file
-        String strSavedServerAddress = null;
-        int nSavedServerPort = -1;
-        String strNewServerAddress = null;
-        String strNewServerPort = null;
-
-        strSavedServerAddress = m_clientStub.getServerAddress();
-        nSavedServerPort = m_clientStub.getServerPort();
-
-        // ask the user if he/she would like to change the server info
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        printMsgln("========== start CM");
-        printMsgln("my current address: "+strCurrentLocalAddress);
-        printMsgln("saved server address: "+strSavedServerAddress);
-        printMsgln("saved server port: "+nSavedServerPort);
-
-        try {
-            System.out.print("new server address (enter for saved value): ");
-            strNewServerAddress = br.readLine().trim();
-            System.out.print("new server port (enter for saved value): ");
-            strNewServerPort = br.readLine().trim();
-
-            // update the server info if the user would like to do
-            if(!strNewServerAddress.isEmpty() && !strNewServerAddress.equals(strSavedServerAddress))
-                m_clientStub.setServerAddress(strNewServerAddress);
-            if(!strNewServerPort.isEmpty() && Integer.parseInt(strNewServerPort) != nSavedServerPort)
-                m_clientStub.setServerPort(Integer.parseInt(strNewServerPort));
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        */
         boolean bRet = m_clientStub.startCM();
         if(!bRet) {
             System.err.println("CM initialization error!");
@@ -340,14 +313,15 @@ public class CMClientApp extends JFrame {
         startMainSession();
     }
     public void terminateCM()   {
-        m_clientStub.terminateCM();
-        m_bRun = false;
+        int option  = JOptionPane.showConfirmDialog(null, "Really Want to Terminate CM?", "[TerminateCM]Confirm", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            m_clientStub.terminateCM();
+        }
     }
 
     public void login() {
         String userName = null;
         String userPassword = null;
-        //Console console = System.console();
 
         boolean ret = false;
         JTextField userNameField = new JTextField();
@@ -374,75 +348,8 @@ public class CMClientApp extends JFrame {
             else
                 JOptionPane.showMessageDialog(null, "User["+userName+"] Failed to Login to Default Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
         }
-        /*
-        System.out.print("Enter user name: ");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-
-        try{
-            userName = br.readLine();
-            if (console==null)  {
-                System.out.print("Enter password: ");
-                userPassword = br.readLine();
-            }
-            else
-                userPassword = new String(console.readPassword("password: "));
-        }
-        catch (IOException e)  {
-            e.printStackTrace();
-        }
-        //
-        printMsgln("user name: "+userName);
-        printMsgln("password: "+userPassword);
-
-        //default login
-        ret = m_clientStub.loginCM(userName, userPassword);
-        if (ret)
-            printMsgln("[login] success");
-        else
-            System.err.println("[login] failed");
-        return;
-        */
     }
-    /*
-    public void syncLogin() {
-        String userName = null;
-        String userPassword = null;
-        Console console = System.console();
 
-        boolean ret = false;
-        System.out.print("Enter user name: ");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        try{
-            userName = br.readLine();
-            if (console==null)  {
-                System.out.print("Enter password: ");
-                userPassword = br.readLine();
-            }
-            else
-                userPassword = new String(console.readPassword("password: "));
-        }
-        catch (IOException e)  {
-            e.printStackTrace();
-        }
-        //
-        printMsgln("user name: "+userName);
-        printMsgln("password: "+userPassword);
-
-        CMSessionEvent loginAckEvent = null;
-        loginAckEvent = m_clientStub.syncLoginCM(userName, userPassword);
-        if(loginAckEvent != null) {
-            if(loginAckEvent.isValidUser() == 0)
-                System.err.println("This client fails authentication by the default server!");
-            else if(loginAckEvent.isValidUser() == -1)
-                System.err.println("This client is already in the login-user list!");
-            else
-                printMsgln("This client successfully logs in to the default server.");
-        }
-        else
-            System.err.println("failed the login request!");
-    }
-    //after login process has completed, a client app must join a session and a group of CM to finish entering the CM network
-*/
     public void logout()    {
         String userName = m_clientStub.getMyself().getName();
         int option  = JOptionPane.showConfirmDialog(null, "Really Want to LogOut From Default Server?", "[Logout]Confirm", JOptionPane.OK_CANCEL_OPTION);
@@ -456,8 +363,10 @@ public class CMClientApp extends JFrame {
     }
     public void requestSessionInfo()    {
         printMsgln("==requestSessionInfo==");
-        boolean bRet = m_clientStub.requestSessionInfo();
-        if (bRet)   printMsgln("[requestSessionInfo] success");
+        boolean ret = m_clientStub.requestSessionInfo();
+        if (ret)   {
+            printMsgln("[requestSessionInfo] success");
+        }
         else    printMsgln("[requestSessionInfo] failed");
         printMsgln("=====================");
         return;
@@ -494,106 +403,73 @@ public class CMClientApp extends JFrame {
         int fcRet = fc.showOpenDialog(null);
         if(fcRet != JFileChooser.APPROVE_OPTION) return;
         File[] files = fc.getSelectedFiles();
-
-        for(File file : files)
+        String fileInfos = "";
+        for(File file : files)  {
             printMsgln("selected file = " + file);
+            fileInfos+=file.getName()+" ["+file.getPath()+"]\n";
+        }
         if(files.length < 1) {
             System.err.println("No file selected!");
             return;
         }
+        JList curGroupUserList = getCurGroupUserJList();
+        curGroupUserList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        MyActionListener cmListSelectionListener = new MyActionListener();
+        curGroupUserList.addListSelectionListener(cmListSelectionListener);
         JTextField recvField = new JTextField();
         Object[] message = {
-                "Enter Receiver's Name(null for SERVER): ", recvField
+                "Files To Send", fileInfos,
+                "Users In Current Group",
+                curGroupUserList,
+                "Enter Receiver's Name(Just Enter for SERVER): ", recvField
         };
-        int option = JOptionPane.showConfirmDialog(null, message, "Login Info", JOptionPane.OK_CANCEL_OPTION);
+        int option = JOptionPane.showConfirmDialog(null, message, "Confirm PushFile Receiver", JOptionPane.OK_CANCEL_OPTION);
         if (option==JOptionPane.OK_OPTION)  {
             strReceiver = recvField.getText();
-            if (strReceiver == null)
+            if (strReceiver.equals(""))
                 strReceiver = "SERVER";
             for(File file:files)    {
                 String filePath = file.getPath();
                 boolean ret = m_clientStub.pushFile(filePath, strReceiver);
-                if (ret)
-                    printMsgln("User["+m_clientStub.getMyself().getName()+"] Successed to push File["+file.getName()+"] to User["+strReceiver+"]");
-                else
-                    printMsgln("User["+m_clientStub.getMyself().getName()+"] Failed to push File["+file.getName()+"] to User["+strReceiver+"]");
+                if (ret) {
+                    if (strReceiver.equals("SERVER"))
+                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to [Default Server]");
+                    else
+                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to User["+strReceiver+"]");
+                }
+                else    {
+                    if (strReceiver.equals("SERVER"))
+                        printMsgln("User["+m_clientStub.getMyself().getName()+"] Failed to push File["+file.getName()+"] to [Default Server]");
+                    else
+                        printMsgln("User["+m_clientStub.getMyself().getName()+"] Failed to push File["+file.getName()+"] to User["+strReceiver+"]");
+                }
+
             }
 
         }
-        /*
-        printMsgln("====== push a file");
-        try {
-            System.out.print("File path name: ");
-            strFilePath = br.readLine();
-            System.out.print("File receiver: ");
-            strReceiver = br.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        boolean bRet = m_clientStub.pushFile(strFilePath, strReceiver);
-        if (bRet)
-            printMsgln("[pushFile] success");
-        else
-            System.err.println("[pushFile] failed");
-
-         */
-    }
-    public void pushFiles() {
-        String[] strFiles = null;
-        String strFileList = null;
-        int nMode = -1; // 1: push, 2: pull
-        int nFileNum = -1;
-        String strTarget = null;
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        printMsgln("====== pull/push multiple files");
-        try {
-            System.out.print("Select mode (1: push, 2: pull): ");
-            nMode = Integer.parseInt(br.readLine());
-            if(nMode == 1) {
-                System.out.print("Input receiver name: ");
-                strTarget = br.readLine();
-            }
-            else if(nMode == 2) {
-                System.out.print("Input file owner name: ");
-                strTarget = br.readLine();
-            }
-            else {
-                printMsgln("Incorrect transmission mode!");
-                return;
-            }
-
-            System.out.print("Number of files: ");
-            nFileNum = Integer.parseInt(br.readLine());
-            System.out.print("Input file names separated with space: ");
-            strFileList = br.readLine();
-
-        } catch (NumberFormatException e) {
-            e.printStackTrace();
-            return;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-
-        strFileList.trim();
-        strFiles = strFileList.split("\\s+");
-        if(strFiles.length != nFileNum) {
-            printMsgln("The number of files incorrect!");
-            return;
-        }
-
-        for(int i = 0; i < nFileNum; i++) {
-            switch(nMode) {
-                case 1: // push
-                    CMFileTransferManager.pushFile(strFiles[i], strTarget, m_clientStub.getCMInfo());
-                    break;
-                case 2: // pull
-                    CMFileTransferManager.requestPermitForPullFile(strFiles[i], strTarget, m_clientStub.getCMInfo());
-                    break;
-            }
-        }
-
-        return;
     }
 
+    public JList getCurGroupUserJList() {
+        CMMember curGroupUsers = m_clientStub.getGroupMembers();
+        Vector<CMUser> vGroupUsers = curGroupUsers.getAllMembers();
+        Iterator<CMUser> iter = vGroupUsers.iterator();
+        JList curGroupUserList;
+        List<String> curGroupUserlist = new ArrayList<>();
+        while(iter.hasNext())   {
+            curGroupUserlist.add(iter.next().getName());
+        }
+        curGroupUserList = new JList(curGroupUserlist.toArray());
+        return curGroupUserList;
+    }
+    public void requestCurrentGroupMembers()    {
+        setVisible(true);
+        JList curGroupUserList = getCurGroupUserJList();
+        MyActionListener cmListSelectionListener = new MyActionListener();
+        curGroupUserList.addListSelectionListener(cmListSelectionListener);
+        Object[] message = {
+                "Client Users In Current Group(Except Me)",
+                curGroupUserList,
+        };
+        JOptionPane.showConfirmDialog(null, message, "Showing Current Group Members", JOptionPane.CLOSED_OPTION);
+    }
 }

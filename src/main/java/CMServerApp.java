@@ -4,8 +4,12 @@ import kr.ac.konkuk.ccslab.cm.manager.CMConfigurator;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.text.*;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -15,7 +19,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Vector;
 
 public class CMServerApp extends JFrame{
@@ -25,7 +31,7 @@ public class CMServerApp extends JFrame{
     private JTextPane m_outTextPane;
     private JTextField m_inTextField;
     private JButton m_startStopButton;
-
+    private String selectedUser = null;
     private final int PRINTALLMENU = 0;
     private final int STARTCM = 1;
     private final int TERMINATECM = 9;
@@ -40,6 +46,7 @@ public class CMServerApp extends JFrame{
     public CMServerApp()    {
         MyKeyListener cmKeyListener = new MyKeyListener();
         MyActionListener cmActionListener = new MyActionListener();
+        selectedUser = null;
         setTitle("CM Server");
         setSize(500, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -59,8 +66,7 @@ public class CMServerApp extends JFrame{
         StyleConstants.setBold(boldStyle, true);
 
         add(m_outTextPane, BorderLayout.CENTER);
-        JScrollPane scroll = new JScrollPane (m_outTextPane,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane scroll = new JScrollPane (m_outTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         add(scroll);
 
@@ -191,7 +197,7 @@ public class CMServerApp extends JFrame{
         printStyledMsgln("=====================================", "bold");
     }
     public void manageCurrentUsers()    {
-
+        MyActionListener cmActionListener = new MyActionListener();
         CMMember loginUsers = m_serverStub.getLoginUsers();
         if (loginUsers==null)   {
             JOptionPane.showMessageDialog(null, "There's No Users in Current Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
@@ -199,26 +205,30 @@ public class CMServerApp extends JFrame{
         }
         JFrame jf = new JFrame("manage Current Users");
         final JLabel jl = new JLabel();
-        jl.setSize(800, 500);
+
         JButton jButtonUserInfo = new JButton("User Info");
-        JButton jButtonLogOut = new JButton("LogOut");
+        JButton jButtonLogOut = new JButton("LogOut User");
+        jButtonLogOut.addActionListener(cmActionListener);
+        jButtonUserInfo.addActionListener(cmActionListener);
         final DefaultListModel<String> lm = new DefaultListModel<>();
 
         Vector<CMUser> vLoginUsers = loginUsers.getAllMembers();
         Iterator<CMUser> iter = vLoginUsers.iterator();
-        int uCnt = 1;
-        while(iter.hasNext()) {
-            CMUser uTemp = iter.next();
-            lm.addElement(uTemp.getName());
+        JList curGroupUserList;
+        List<String> curGroupUserlist = new ArrayList<>();
+        while(iter.hasNext())   {
+            curGroupUserlist.add(iter.next().getName());
         }
-        final JList<String> ls = new JList<>(lm);
-        jf.add(ls);
+        curGroupUserList = new JList(curGroupUserlist.toArray());
+        curGroupUserList.addListSelectionListener(cmActionListener);
+        jf.setSize(500, 500);
+        jf.setLayout(new BorderLayout());
+        jf.add(curGroupUserList);
         jf.add(jButtonUserInfo);
         jf.add(jButtonLogOut);
-        jf.setSize(500, 300);
-        jf.setLayout(null);
+
         jf.setVisible(true);
-        jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        jf.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
     public void setFilePath() {
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -329,6 +339,9 @@ public class CMServerApp extends JFrame{
             case PRINTCURRENTUSERS:
                 printCurrentUsers();
                 break;
+            case MANAGECURRENTUSERS:
+                manageCurrentUsers();
+                break;
             case TERMINATECM:
                 terminateCM();
                 break;
@@ -366,20 +379,15 @@ public class CMServerApp extends JFrame{
         printStyledMsg(strText+"\n", strStyleName);
         return;
     }
-    public class MyActionListener implements ActionListener {
-        public void actionPerformed(ActionEvent e)
-        {
+    public class MyActionListener implements ActionListener, ListSelectionListener {
+        public void actionPerformed(ActionEvent e) {
             JButton button = (JButton) e.getSource();
-            if(button.getText().equals("Start Server CM"))
-            {
+            if(button.getText().equals("Start Server CM")) {
                 // start cm
                 boolean bRet = m_serverStub.startCM();
                 if(!bRet)
-                {
                     printStyledMsg("CM initialization error!\n", "bold");
-                }
-                else
-                {
+                else {
                     printStyledMsg("Server CM starts.\n", "bold");
                     printMsg("Type \"0\" for menu.\n");
                     // change button to "stop CM"
@@ -394,14 +402,32 @@ public class CMServerApp extends JFrame{
                 }
                 m_inTextField.requestFocus();
             }
-            else if(button.getText().equals("Stop Server CM"))
-            {
+            else if(button.getText().equals("Stop Server CM")) {
                 // stop cm
                 m_serverStub.terminateCM();
                 printMsg("Server CM terminates.\n");
                 // change button to "start CM"
                 button.setText("Start Server CM");
             }
+            else if (button.getText().equals("LogOut User"))    {
+                m_serverStub.getLoginUsers().removeMember(selectedUser);
+            }
+            else if (button.getText().equals("User Info"))  {
+                CMUser CMTemp = m_serverStub.getLoginUsers().findMember(selectedUser);
+                Object message[] = {
+                        CMTemp.getName(),
+                        CMTemp.getID(),
+                        CMTemp.getPasswd()
+                };
+                int option = JOptionPane.showConfirmDialog(null, message, "Login Info", JOptionPane.OK_CANCEL_OPTION);
+            }
+        }
+        public void valueChanged(ListSelectionEvent e)  {
+            JList list = (JList) e.getSource();
+            if (list.getSelectedIndex()!=-1)    {
+                selectedUser = (String) list.getSelectedValue();
+            }
         }
     }
+
 }

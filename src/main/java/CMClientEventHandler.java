@@ -101,13 +101,13 @@ public class CMClientEventHandler implements CMAppEventHandler {
         CMUserEvent ue = (CMUserEvent) cme;
         switch (ue.getStringID())   {
             case "userInfo":
-                printMsg("[USER_EVENT]ID: "+ue.getStringID());
+                System.out.println("[USER_EVENT]ID: "+ue.getStringID());
                 String name = ue.getEventField(CMInfo.CM_STR, "name");
                 int age = Integer.parseInt(ue.getEventField(CMInfo.CM_INT, "age"));
                 double weight = Double.parseDouble(ue.getEventField(CMInfo.CM_DOUBLE, "weight"));
-                printMsg("Field value: name: "+name);
-                printMsg("Field value: age: "+age);
-                printMsg("Field value: weight: "+weight);
+                System.out.println("Field value: name: "+name);
+                System.out.println("Field value: age: "+age);
+                System.out.println("Field value: weight: "+weight);
                 break;
             default:
                 System.err.println("[USER_EVENT]unknown CMUserEvent ID: "+ue.getStringID());
@@ -115,7 +115,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
     }
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
-        printMsg("[processFileEvent]"+fe.getID());
+        System.out.println("[processFileEvent]"+fe.getID());
         switch (fe.getID()) {
             case CMFileEvent.REQUEST_PERMIT_PULL_FILE:
                 String strReq = "["+fe.getFileReceiver()+"] requests file("+fe.getFileName()+ ").";
