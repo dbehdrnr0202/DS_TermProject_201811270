@@ -6,12 +6,16 @@ import kr.ac.konkuk.ccslab.cm.manager.CMDBManager;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 import kr.ac.konkuk.ccslab.cm.event.handler.CMAppEventHandler;
 
+import javax.swing.text.BadLocationException;
+import javax.swing.text.StyledDocument;
 import java.util.Iterator;
 
 public class CMServerEventHandler implements CMAppEventHandler {
     private CMServerStub m_serverStub;
-    public CMServerEventHandler(CMServerStub serverStub)    {
+    private CMServerApp m_server;
+    public CMServerEventHandler(CMServerStub serverStub, CMServerApp server)    {
         m_serverStub = serverStub;
+        m_server = server;
     }
     @Override
     public void processEvent(CMEvent cme)   {
@@ -35,22 +39,23 @@ public class CMServerEventHandler implements CMAppEventHandler {
 
     private void processDummyEvent(CMEvent cme) {
         CMDummyEvent de = (CMDummyEvent) cme;
-        System.out.println("[processDummyEvent]");
-        System.out.println(de.getHandlerSession()+", "+de.getHandlerGroup());
-        System.out.println("Dummy msg: "+de.getDummyInfo());
+        printMsg("[processDummyEvent]");
+        printMsg(de.getHandlerSession()+", "+de.getHandlerGroup());
+        printMsg("Dummy msg: "+de.getDummyInfo());
     }
     private void processUserEvent(CMEvent cme)  {
         CMUserEvent ue = (CMUserEvent) cme;
-        System.out.println("[processUserEvent]");
+        printMsg("[processUserEvent]");
         //
         switch (ue.getID()) {
+
             default:
                 break;
         }
     }
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
-        System.out.println("[processFileEvent]"+fe.getID());
+        printMsg("[processFileEvent]"+fe.getID());
         switch (fe.getID()) {
             case CMFileEvent.REPLY_PERMIT_PULL_FILE:
                 if(fe.getReturnCode() == -1) {
@@ -67,7 +72,12 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 }
                 break;
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
-                //
+                printMsg("["+fe.getFileSender()+"] completes to send file("+fe.getFileName()+", "+fe.getFileSize()+" Bytes).");
+                String strFile = fe.getFileName();
+                //if(m_bDistFileProc) {
+               //     processFile(fe.getFileSender(), strFile);
+                //    m_bDistFileProc = false;
+                //}
                 break;
             case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
                 //
@@ -79,44 +89,48 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private  void processSessionEvent(CMEvent cme)  {
         CMConfigurationInfo confInfo = m_serverStub.getCMInfo().getConfigurationInfo();
         CMSessionEvent se = (CMSessionEvent) cme;
-        System.out.println("[procesSessionEvent]");
+        printMsg("[procesSessionEvent]");
         switch (se.getID()) {
             case CMSessionEvent.LOGIN:
-                System.out.println("["+se.getUserName()+"] requests login.");
+                printMsg("["+se.getUserName()+"] requests login.");
 
                 //여기서 cm-server.conf에서 SESSION_SCHEME 0으로 설정했다.=> No authorization
                 if (confInfo.isLoginScheme())   {
                     boolean ret = CMDBManager.authenticateUser(se.getUserName(), se.getPassword(), m_serverStub.getCMInfo());
                     if (!ret)   {
-                        System.out.println("["+se.getUserName()+"] authentication fails");
+                        printMsg("["+se.getUserName()+"] authentication fails");
                         m_serverStub.replyEvent(se, 0);
                     }
                     else {
-                        System.out.println("["+se.getUserName()+"] authentication succeeded");
+                        printMsg("["+se.getUserName()+"] authentication succeeded");
                         m_serverStub.replyEvent(se, 1);
                     }
                 }
                 else {
                     System.out.println("SESSION_SCHEME IS 0, NO LOGIN SCHEME");
-                    //System.out.println("["+se.getUserName()+"] login succeeded");
+                    //printMsg("["+se.getUserName()+"] login succeeded");
                 }
                 break;
             case CMSessionEvent.LOGOUT:
-                System.out.println("["+se.getUserName()+"] requests logout.");
+                printMsg("["+se.getUserName()+"] requests logout.");
                 break;
             case CMSessionEvent.RESPONSE_SESSION_INFO:
-                System.out.println("["+se.getUserName()+"] requests session Info.");
+                printMsg("["+se.getUserName()+"] requests session Info.");
                 break;
             case CMSessionEvent.REGISTER_USER:
-                System.out.println("User registration requested by user["+se.getUserName()+"].");
+                printMsg("User registration requested by user["+se.getUserName()+"].");
                 break;
             case CMSessionEvent.LEAVE_SESSION:
-                System.out.println("["+se.getUserName()+"] leaves the "+se.getSessionName());
+                printMsg("["+se.getUserName()+"] leaves the "+se.getSessionName());
             case CMSessionEvent.JOIN_SESSION:
-                System.out.println("["+se.getUserName()+"] joins the "+se.getSessionName());
+                printMsg("["+se.getUserName()+"] joins the "+se.getSessionName());
                 /*need more */
             default:
                 return;
         }
+    }
+    private void printMsg(String strText)   {
+        m_server.printStyledMsgln(strText, "bold");
+        return;
     }
 }

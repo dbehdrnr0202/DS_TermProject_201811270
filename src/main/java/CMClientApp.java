@@ -1,10 +1,17 @@
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
 import kr.ac.konkuk.ccslab.cm.manager.CMCommManager;
+import kr.ac.konkuk.ccslab.cm.manager.CMConfigurator;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 import kr.ac.konkuk.ccslab.cm.manager.CMFileTransferManager;
 
 import javax.imageio.IIOException;
 import javax.swing.*;
+import javax.swing.text.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.Console;
 import java.io.IOException;
@@ -14,10 +21,13 @@ import java.io.File;
 import java.util.List;
 import java.util.Scanner;
 
-public class CMClientApp {
+public class CMClientApp extends JFrame {
     private CMClientStub m_clientStub;
     private CMClientEventHandler m_eventHandler;
     private Scanner m_scanner;
+    private JTextPane m_outTextPane;
+    private JTextField m_inTextField;
+    private JButton m_logInOutButton;
     private boolean m_bRun;
 
 
@@ -35,9 +45,164 @@ public class CMClientApp {
     private final int PUSH_FILE = 61;
     private final int PUSH_FILES = 62;
 
+    public void printMsg(String strText) {
+        printStyledMsg(strText, null);
+    }
+    public void printMsgln(String strText) {
+        printMsg(strText+"\n");
+        return;
+    }
+    public void printStyledMsg(String strText, String strStyleName) {
+        StyledDocument doc = m_outTextPane.getStyledDocument();
+        try {
+            if (strStyleName==null)
+                doc.insertString(doc.getLength(), strText, null);
+            else doc.insertString(doc.getLength(), strText, doc.getStyle(strStyleName));
+            m_outTextPane.setCaretPosition(m_outTextPane.getDocument().getLength());
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+        return;
+    }
+    public void printStyledMsgln(String strText, String strStyleName)   {
+        printStyledMsg(strText+"\n", strStyleName);
+        return;
+    }
+    public class MyKeyListener implements KeyListener {
+        public void keyPressed(KeyEvent e)
+        {
+            int key = e.getKeyCode();
+            if(key == KeyEvent.VK_ENTER)
+            {
+                JTextField input = (JTextField)e.getSource();
+                String strText = input.getText();
+                printMsg(strText+"\n");
+                // parse and call CM API
+                processInput(strText);
+                input.setText("");
+                input.requestFocus();
+            }
+        }
+
+        public void keyReleased(KeyEvent e){}
+        public void keyTyped(KeyEvent e){}
+    }
+    private void processInput(String strText) {
+        int nCommand = -1;
+        try{
+            nCommand = Integer.parseInt(strText);
+        }catch (NumberFormatException e)    {
+            printMsgln("Command Number Error");
+            return;
+        }
+
+        switch (nCommand) {
+            case PRINTALLMENU:
+                printAllMenus();
+                break;
+            //start, terminate cm
+            case TERMINATECM:
+                terminateCM();
+                break;
+            //login, logout
+            case LOGIN:
+                login();
+                break;
+            case LOGOUT:
+                logout();
+                break;
+            //about session information
+            case REQUEST_SESSION_INFO:
+                requestSessionInfo();
+                break;
+            //file transmission
+            case REQUEST_FILE:
+                requestFile();
+                break;
+            case PUSH_FILE:
+                pushFile();
+                break;
+            case PUSH_FILES:
+                pushFiles();
+                break;
+            default:
+        }
+    }
+    public class MyActionListener implements ActionListener {
+        public void actionPerformed(ActionEvent e)
+        {
+            JButton button = (JButton) e.getSource();
+            if(button.getText().equals("Start Client CM"))
+            {
+                // start cm
+                boolean bRet = m_clientStub.startCM();
+                if(!bRet)
+                {
+                    printStyledMsg("CM initialization error!\n", "bold");
+                }
+                else
+                {
+                    printStyledMsg("Client CM starts.\n", "bold");
+                    printMsg("Type \"0\" for menu.\n");
+                    // change button to "stop CM"
+                    button.setText("Stop Client CM");
+                }
+                m_inTextField.requestFocus();
+            }
+            else if(button.getText().equals("LogOut to Default CM Server"))
+            {
+                // stop cm
+                m_clientStub.terminateCM();
+                printMsg("Client CM terminates.\n");
+                // change button to "start CM"
+                button.setText("Start Client CM");
+            }
+        }
+    }
     public CMClientApp(){
+        MyKeyListener cmKeyListener = new MyKeyListener();
+        MyActionListener cmActionListener = new MyActionListener();
+        setTitle("CM Client");
+        setSize(500, 500);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        setLayout(new BorderLayout());
+
+        m_outTextPane = new JTextPane();
+        m_outTextPane.setEditable(false);
+
+        StyledDocument doc = m_outTextPane.getStyledDocument();
+        Style defStyle = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);
+
+        Style regularStyle = doc.addStyle("regular", defStyle);
+        StyleConstants.setFontFamily(regularStyle, "SansSerif");
+
+        Style boldStyle = doc.addStyle("bold", defStyle);
+        StyleConstants.setBold(boldStyle, true);
+
+        add(m_outTextPane, BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane (m_outTextPane,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        add(scroll);
+
+        m_inTextField = new JTextField();
+        m_inTextField.addKeyListener(cmKeyListener);
+        add(m_inTextField, BorderLayout.SOUTH);
+
+        JPanel topButtonPanel = new JPanel();
+        topButtonPanel.setLayout(new FlowLayout());
+        add(topButtonPanel, BorderLayout.NORTH);
+
+        m_logInOutButton = new JButton("LogIn to Default CM Server");
+        m_logInOutButton.addActionListener(cmActionListener);
+        m_logInOutButton.setEnabled(false);
+        //add(startStopButton, BorderLayout.NORTH);
+        topButtonPanel.add(m_logInOutButton);
+
+        setVisible(true);
         m_clientStub = new CMClientStub();
-        m_eventHandler = new CMClientEventHandler(m_clientStub);
+        m_eventHandler = new CMClientEventHandler(m_clientStub, this);
         m_scanner = new Scanner((System.in));
     }
     public CMClientStub getClientStub() {
@@ -53,15 +218,15 @@ public class CMClientApp {
         cmStub.setAppEventHandler(eventHandler);
         client.startCM();
 
-        //System.out.println("Client App terminated");
+        //printMsgln("Client App terminated");
     }
     public void startMainSession() {
-        System.out.println("client application main session starts.");
+        printMsgln("client application main session starts.");
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String strInput = null;
         int nCommand = -1;
         while(m_bRun) {
-            System.out.println("Type \"0\" for menu.");
+            printMsgln("Type \"0\" for menu.");
             System.out.print("> ");
             try {
                 strInput = br.readLine();
@@ -72,7 +237,7 @@ public class CMClientApp {
             try {
                 nCommand = Integer.parseInt(strInput);
             } catch (NumberFormatException e) {
-                System.out.println("Incorrect command format!");
+                printMsgln("Incorrect command format!");
                 continue;
             }
 
@@ -81,17 +246,12 @@ public class CMClientApp {
                     printAllMenus();
                     break;
                 //start, terminate cm
-                /*
-                case STARTCM:
-                    startCM();
-                    break;
-                */
                 case TERMINATECM:
                     terminateCM();
                     break;
                 //login, logout
                 case LOGIN:
-                    defaultLogin();
+                    login();
                     break;
                 case LOGOUT:
                     logout();
@@ -116,19 +276,19 @@ public class CMClientApp {
     }
 
     public void printAllMenus() {
-        System.out.println("Print All Menu: "+PRINTALLMENU);
-        System.out.println("====About CM===");
-        //System.out.println("Start CM: "+STARTCM);
-        System.out.println("Terminate CM: "+TERMINATECM);
-        System.out.println("====About Log In/Out===");
-        System.out.println("Log In: "+LOGIN);
-        System.out.println("Log Out: "+LOGOUT);
-        System.out.println("====About Session===");
-        System.out.println("Request Session Info: "+REQUEST_SESSION_INFO);
-        System.out.println("====About File===");
-        System.out.println("Request File: "+REQUEST_FILE);
-        System.out.println("Push File: "+PUSH_FILE);
-        System.out.println("Push Files: "+PUSH_FILES);
+        printMsgln("Print All Menu: "+PRINTALLMENU);
+        printMsgln("====About CM===");
+        //printMsgln("Start CM: "+STARTCM);
+        printMsgln("Terminate CM: "+TERMINATECM);
+        printMsgln("====About Log In/Out===");
+        printMsgln("Log In: "+LOGIN);
+        printMsgln("Log Out: "+LOGOUT);
+        printMsgln("====About Session===");
+        printMsgln("Request Session Info: "+REQUEST_SESSION_INFO);
+        printMsgln("====About File===");
+        printMsgln("Request File: "+REQUEST_FILE);
+        printMsgln("Push File: "+PUSH_FILE);
+        printMsgln("Push Files: "+PUSH_FILES);
     }
     public void startCM()   {
         /*
@@ -150,10 +310,10 @@ public class CMClientApp {
 
         // ask the user if he/she would like to change the server info
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("========== start CM");
-        System.out.println("my current address: "+strCurrentLocalAddress);
-        System.out.println("saved server address: "+strSavedServerAddress);
-        System.out.println("saved server port: "+nSavedServerPort);
+        printMsgln("========== start CM");
+        printMsgln("my current address: "+strCurrentLocalAddress);
+        printMsgln("saved server address: "+strSavedServerAddress);
+        printMsgln("saved server port: "+nSavedServerPort);
 
         try {
             System.out.print("new server address (enter for saved value): ");
@@ -184,14 +344,40 @@ public class CMClientApp {
         m_bRun = false;
     }
 
-    public void defaultLogin() {
+    public void login() {
         String userName = null;
         String userPassword = null;
-        Console console = System.console();
+        //Console console = System.console();
 
         boolean ret = false;
+        JTextField userNameField = new JTextField();
+        JPasswordField userPasswordField = new JPasswordField();
+        Object[] message = {
+                "Enter User Name: ", userNameField,
+                "Enter Password: ", userPasswordField
+        };
+        int option = JOptionPane.showConfirmDialog(null, message, "Login Info", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            userName = userNameField.getText();
+            userPassword = new String(userPasswordField.getPassword());
+            if (userName.equals("SERVER")) {
+                JOptionPane.showMessageDialog(null, "UserName SERVER is only for Server App", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (userName.equals("") ||userPassword.equals("")) {
+                JOptionPane.showMessageDialog(null, "User ID/PW is Empty", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            ret = m_clientStub.loginCM(userName, userPassword);
+            if (ret)
+                JOptionPane.showMessageDialog(null, "User["+userName+"] Successed to Login to Default Server");
+            else
+                JOptionPane.showMessageDialog(null, "User["+userName+"] Failed to Login to Default Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+        }
+        /*
         System.out.print("Enter user name: ");
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
         try{
             userName = br.readLine();
             if (console==null)  {
@@ -205,16 +391,17 @@ public class CMClientApp {
             e.printStackTrace();
         }
         //
-        System.out.println("user name: "+userName);
-        System.out.println("password: "+userPassword);
+        printMsgln("user name: "+userName);
+        printMsgln("password: "+userPassword);
 
         //default login
         ret = m_clientStub.loginCM(userName, userPassword);
         if (ret)
-            System.out.println("[login] success");
+            printMsgln("[login] success");
         else
             System.err.println("[login] failed");
         return;
+        */
     }
     /*
     public void syncLogin() {
@@ -238,8 +425,8 @@ public class CMClientApp {
             e.printStackTrace();
         }
         //
-        System.out.println("user name: "+userName);
-        System.out.println("password: "+userPassword);
+        printMsgln("user name: "+userName);
+        printMsgln("password: "+userPassword);
 
         CMSessionEvent loginAckEvent = null;
         loginAckEvent = m_clientStub.syncLoginCM(userName, userPassword);
@@ -249,7 +436,7 @@ public class CMClientApp {
             else if(loginAckEvent.isValidUser() == -1)
                 System.err.println("This client is already in the login-user list!");
             else
-                System.out.println("This client successfully logs in to the default server.");
+                printMsgln("This client successfully logs in to the default server.");
         }
         else
             System.err.println("failed the login request!");
@@ -257,25 +444,29 @@ public class CMClientApp {
     //after login process has completed, a client app must join a session and a group of CM to finish entering the CM network
 */
     public void logout()    {
-        boolean bRet = m_clientStub.logoutCM();
-        if (bRet)
-            System.out.println("[logout] success");
-        else
-            System.err.println("[logout] failed");
+        String userName = m_clientStub.getMyself().getName();
+        int option  = JOptionPane.showConfirmDialog(null, "Really Want to LogOut From Default Server?", "[Logout]Confirm", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            boolean ret = m_clientStub.logoutCM();
+            if (ret)
+                JOptionPane.showMessageDialog(null, "User["+userName+"] Successed to Login to Default Server");
+            else
+                JOptionPane.showMessageDialog(null, "User["+userName+"] Failed to Login to Default Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+        }
     }
     public void requestSessionInfo()    {
-        System.out.println("==requestSessionInfo==");
+        printMsgln("==requestSessionInfo==");
         boolean bRet = m_clientStub.requestSessionInfo();
-        if (bRet)   System.out.println("[requestSessionInfo] success");
-        else    System.out.println("[requestSessionInfo] failed");
-        System.out.println("=====================");
+        if (bRet)   printMsgln("[requestSessionInfo] success");
+        else    printMsgln("[requestSessionInfo] failed");
+        printMsgln("=====================");
         return;
     }
     public void requestFile()   {
         String strFileName = null;
         String strFileOwner = null;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("====== request a file");
+        printMsgln("====== request a file");
         try {
             System.out.print("File name: ");
             strFileName = br.readLine();
@@ -286,7 +477,7 @@ public class CMClientApp {
         }
         boolean bRet = m_clientStub.requestFile(strFileName, strFileOwner);
         if (bRet)
-            System.out.println("[requestFile] success");
+            printMsgln("[requestFile] success");
         else
             System.err.println("[requestFile] failed");
 
@@ -305,25 +496,32 @@ public class CMClientApp {
         File[] files = fc.getSelectedFiles();
 
         for(File file : files)
-            System.out.println("selected file = " + file);
+            printMsgln("selected file = " + file);
         if(files.length < 1) {
             System.err.println("No file selected!");
             return;
         }
-        System.out.println("Receiver of files: ");
-        System.out.println("Type \"SERVER\" for the server or \"mlim\" for client receiver.");
-        System.out.println("For \"mlim\", you must run CMClientFile before the file transfer.");
-        String receiver = m_scanner.nextLine().trim();
-        boolean b_rtn = false;
-        // send files
-        for(File file : files) {
-            String filePath = file.getPath();
-            b_rtn = m_clientStub.pushFile(filePath, receiver);
-            if (b_rtn)
-                System.out.println("File Name: ["+file.getName()+"] pushed successfully");
+        JTextField recvField = new JTextField();
+        Object[] message = {
+                "Enter Receiver's Name(null for SERVER): ", recvField
+        };
+        int option = JOptionPane.showConfirmDialog(null, message, "Login Info", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            strReceiver = recvField.getText();
+            if (strReceiver == null)
+                strReceiver = "SERVER";
+            for(File file:files)    {
+                String filePath = file.getPath();
+                boolean ret = m_clientStub.pushFile(filePath, strReceiver);
+                if (ret)
+                    printMsgln("User["+m_clientStub.getMyself().getName()+"] Successed to push File["+file.getName()+"] to User["+strReceiver+"]");
+                else
+                    printMsgln("User["+m_clientStub.getMyself().getName()+"] Failed to push File["+file.getName()+"] to User["+strReceiver+"]");
+            }
+
         }
         /*
-        System.out.println("====== push a file");
+        printMsgln("====== push a file");
         try {
             System.out.print("File path name: ");
             strFilePath = br.readLine();
@@ -334,7 +532,7 @@ public class CMClientApp {
         }
         boolean bRet = m_clientStub.pushFile(strFilePath, strReceiver);
         if (bRet)
-            System.out.println("[pushFile] success");
+            printMsgln("[pushFile] success");
         else
             System.err.println("[pushFile] failed");
 
@@ -347,7 +545,7 @@ public class CMClientApp {
         int nFileNum = -1;
         String strTarget = null;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("====== pull/push multiple files");
+        printMsgln("====== pull/push multiple files");
         try {
             System.out.print("Select mode (1: push, 2: pull): ");
             nMode = Integer.parseInt(br.readLine());
@@ -360,7 +558,7 @@ public class CMClientApp {
                 strTarget = br.readLine();
             }
             else {
-                System.out.println("Incorrect transmission mode!");
+                printMsgln("Incorrect transmission mode!");
                 return;
             }
 
@@ -380,7 +578,7 @@ public class CMClientApp {
         strFileList.trim();
         strFiles = strFileList.split("\\s+");
         if(strFiles.length != nFileNum) {
-            System.out.println("The number of files incorrect!");
+            printMsgln("The number of files incorrect!");
             return;
         }
 

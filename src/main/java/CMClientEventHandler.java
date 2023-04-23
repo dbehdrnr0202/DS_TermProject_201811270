@@ -9,8 +9,10 @@ import java.util.Iterator;
 
 public class CMClientEventHandler implements CMAppEventHandler {
     private CMClientStub m_clientStub;
-    public CMClientEventHandler(CMClientStub stub) {
+    private CMClientApp m_client;
+    public CMClientEventHandler(CMClientStub stub, CMClientApp client) {
         m_clientStub = stub;
+        m_client = client;
     }
     @Override
     public void processEvent(CMEvent cme) {
@@ -58,7 +60,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
         }
         //1: valid user
         else if (se.isValidUser()==1){
-            System.out.println("[SESSION_EVENT]This client successfully logs in to the default server.");
+            printMsg("[SESSION_EVENT]This client successfully logs in to the default server.");
         }
         else {
             System.err.println("[SESSION_EVENT]Wrong isValidUser() rtn.");
@@ -80,10 +82,10 @@ public class CMClientEventHandler implements CMAppEventHandler {
         CMDataEvent de = (CMDataEvent)se;
         switch (de.getID()) {
             case CMDataEvent.NEW_USER:
-                System.out.println("[DATA_EVENT]New_User "+de.getUserName()+" joins the group "+de.getHandlerGroup()+" in "+de.getHandlerSession());
+                printMsg("[DATA_EVENT]New_User "+de.getUserName()+" joins the group "+de.getHandlerGroup()+" in "+de.getHandlerSession());
                 break;
             case CMDataEvent.REMOVE_USER:
-                System.out.println("[DATA_EVENT]User "+de.getUserName()+" left the group "+de.getHandlerGroup()+" in "+de.getHandlerSession());
+                printMsg("[DATA_EVENT]User "+de.getUserName()+" left the group "+de.getHandlerGroup()+" in "+de.getHandlerSession());
                 break;
             default:
                 return;
@@ -91,7 +93,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
     }
     private void processDummyEvent(CMEvent cme) {
         CMDummyEvent de = (CMDummyEvent)cme;
-        System.out.println("[DUMMY_EVENT]Dummy msg "+de.getDummyInfo()+" from user"+de.getSender());
+        printMsg("[DUMMY_EVENT]Dummy msg "+de.getDummyInfo()+" from user"+de.getSender());
         return;
     }
 
@@ -99,13 +101,13 @@ public class CMClientEventHandler implements CMAppEventHandler {
         CMUserEvent ue = (CMUserEvent) cme;
         switch (ue.getStringID())   {
             case "userInfo":
-                System.out.println("[USER_EVENT]ID: "+ue.getStringID());
+                printMsg("[USER_EVENT]ID: "+ue.getStringID());
                 String name = ue.getEventField(CMInfo.CM_STR, "name");
                 int age = Integer.parseInt(ue.getEventField(CMInfo.CM_INT, "age"));
                 double weight = Double.parseDouble(ue.getEventField(CMInfo.CM_DOUBLE, "weight"));
-                System.out.println("Field value: name: "+name);
-                System.out.println("Field value: age: "+age);
-                System.out.println("Field value: weight: "+weight);
+                printMsg("Field value: name: "+name);
+                printMsg("Field value: age: "+age);
+                printMsg("Field value: weight: "+weight);
                 break;
             default:
                 System.err.println("[USER_EVENT]unknown CMUserEvent ID: "+ue.getStringID());
@@ -113,40 +115,37 @@ public class CMClientEventHandler implements CMAppEventHandler {
     }
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
-        System.out.println("[processFileEvent]"+fe.getID());
+        printMsg("[processFileEvent]"+fe.getID());
         switch (fe.getID()) {
             case CMFileEvent.REQUEST_PERMIT_PULL_FILE:
-                String strReq = "["+fe.getFileReceiver()+"] requests file("+fe.getFileName()+
-                        ").\n";
-                System.out.print(strReq);
+                String strReq = "["+fe.getFileReceiver()+"] requests file("+fe.getFileName()+ ").";
+                printMsg(strReq);
                 m_clientStub.replyEvent(fe, 1);
                 break;
             //Checking out the result of the file transfer request
             case CMFileEvent.REPLY_PERMIT_PULL_FILE:
                 if(fe.getReturnCode() == -1) {
-                    System.err.print("[FILE_EVENT]"+fe.getFileName()+" does not exist in the owner!\n");
+                    System.err.println("[FILE_EVENT]"+fe.getFileName()+" does not exist in the owner!");
                 }
                 else if(fe.getReturnCode() == 0) {
-                    System.err.print("[FILE_EVENT]"+fe.getFileSender()+" rejects to send file("+fe.getFileName()+").\n");
+                    System.err.println("[FILE_EVENT]"+fe.getFileSender()+" rejects to send file("+fe.getFileName()+").");
                 }
                 break;
+            case CMFileEvent.START_FILE_TRANSFER:
+            case CMFileEvent.START_FILE_TRANSFER_CHAN:
+                printMsg("[FILE_EVENT]"+fe.getFileSender()+" is about to send file("+fe.getFileName()+").");
+                break;
             case CMFileEvent.END_FILE_TRANSFER:
-
-                break;
-            case CMFileEvent.END_FILE_TRANSFER_ACK:
-
-                break;
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
-                System.out.println("[FILE_EVENT]"+fe.getFileSender()+" completes to send file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) to "+fe.getFileReceiver());
-
-                break;
-            case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
-                System.out.println("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from " +fe.getFileSender());
+                printMsg("[FILE_EVENT]"+fe.getFileSender()+" completes to send file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) to "+fe.getFileReceiver());
                 break;
             default:
                 break;
         }
     }
-
+    private void printMsg(String strText)   {
+        m_client.printStyledMsgln(strText, "bold");
+        return;
+    }
 }
 
