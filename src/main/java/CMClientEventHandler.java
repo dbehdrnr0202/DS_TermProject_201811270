@@ -42,6 +42,9 @@ public class CMClientEventHandler implements CMAppEventHandler {
             case CMSessionEvent.LOGIN_ACK:
                 processLOGIN_ACK(se);
                 break;
+            case CMSessionEvent.LOGOUT:
+                processLOGOUT_ACK(se);
+                break;
             case CMSessionEvent.RESPONSE_SESSION_INFO:
                 processRESPONSE_SESSION_INFO(se);
                 break;
@@ -65,7 +68,11 @@ public class CMClientEventHandler implements CMAppEventHandler {
         else {
             System.err.println("[SESSION_EVENT]Wrong isValidUser() rtn.");
         }
-
+    }
+    private void processLOGOUT_ACK(CMSessionEvent se)   {
+        String serverName = se.getSender();
+        printMsg("[SESSION_EVENT] removed From Server["+serverName+"] by Admin");
+        m_clientStub.disconnectFromServer();
     }
     //Receiving session info
     private void processRESPONSE_SESSION_INFO(CMSessionEvent se)    {

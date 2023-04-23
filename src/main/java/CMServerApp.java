@@ -1,5 +1,8 @@
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
 import kr.ac.konkuk.ccslab.cm.entity.CMUser;
+import kr.ac.konkuk.ccslab.cm.event.CMEvent;
+import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
+import kr.ac.konkuk.ccslab.cm.info.CMInfo;
 import kr.ac.konkuk.ccslab.cm.manager.CMConfigurator;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
@@ -31,6 +34,8 @@ public class CMServerApp extends JFrame{
     private JTextPane m_outTextPane;
     private JTextField m_inTextField;
     private JButton m_startStopButton;
+    private JList curGroupUserList;
+    private DefaultListModel listModel;
     private String selectedUser = null;
     private final int PRINTALLMENU = 0;
     private final int STARTCM = 1;
@@ -198,37 +203,40 @@ public class CMServerApp extends JFrame{
     }
     public void manageCurrentUsers()    {
         MyActionListener cmActionListener = new MyActionListener();
-        CMMember loginUsers = m_serverStub.getLoginUsers();
-        if (loginUsers==null)   {
-            JOptionPane.showMessageDialog(null, "There's No Users in Current Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+        if (!updateGroupUserList())
             return;
-        }
         JFrame jf = new JFrame("manage Current Users");
-        final JLabel jl = new JLabel();
+        final JPanel jl = new JPanel();
 
         JButton jButtonUserInfo = new JButton("User Info");
         JButton jButtonLogOut = new JButton("LogOut User");
         jButtonLogOut.addActionListener(cmActionListener);
         jButtonUserInfo.addActionListener(cmActionListener);
-        final DefaultListModel<String> lm = new DefaultListModel<>();
 
+        curGroupUserList.addListSelectionListener(cmActionListener);
+        jf.setSize(500, 500);
+        jf.setLayout(new BorderLayout());
+        jl.add(curGroupUserList);
+        jl.add(jButtonUserInfo);
+        jl.add(jButtonLogOut);
+        jf.add(jl);
+        jf.setVisible(true);
+        jf.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }
+    public boolean updateGroupUserList()   {
+        CMMember loginUsers = m_serverStub.getLoginUsers();
+        if (loginUsers==null)   {
+            JOptionPane.showMessageDialog(null, "There's No Users in Current Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
         Vector<CMUser> vLoginUsers = loginUsers.getAllMembers();
         Iterator<CMUser> iter = vLoginUsers.iterator();
-        JList curGroupUserList;
         List<String> curGroupUserlist = new ArrayList<>();
         while(iter.hasNext())   {
             curGroupUserlist.add(iter.next().getName());
         }
         curGroupUserList = new JList(curGroupUserlist.toArray());
-        curGroupUserList.addListSelectionListener(cmActionListener);
-        jf.setSize(500, 500);
-        jf.setLayout(new BorderLayout());
-        jf.add(curGroupUserList);
-        jf.add(jButtonUserInfo);
-        jf.add(jButtonLogOut);
-
-        jf.setVisible(true);
-        jf.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        return true;
     }
     public void setFilePath() {
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -296,15 +304,12 @@ public class CMServerApp extends JFrame{
         printStyledMsgln("=====================================", "bold");
     }
     public class MyKeyListener implements KeyListener {
-        public void keyPressed(KeyEvent e)
-        {
+        public void keyPressed(KeyEvent e) {
             int key = e.getKeyCode();
-            if(key == KeyEvent.VK_ENTER)
-            {
+            if(key == KeyEvent.VK_ENTER) {
                 JTextField input = (JTextField)e.getSource();
                 String strText = input.getText();
                 printMsg(strText+"\n");
-                // parse and call CM API
                 processInput(strText);
                 input.setText("");
                 input.requestFocus();
@@ -410,16 +415,27 @@ public class CMServerApp extends JFrame{
                 button.setText("Start Server CM");
             }
             else if (button.getText().equals("LogOut User"))    {
-                m_serverStub.getLoginUsers().removeMember(selectedUser);
+                CMSessionEvent cse = new CMSessionEvent();
+                cse.setID(CMSessionEvent.LOGOUT);
+                cse.setType(CMInfo.CM_SESSION_EVENT);
+                cse.setChannelName("Default Server");
+                if (m_serverStub.send((CMEvent) cse, selectedUser)) {
+                    m_serverStub.getLoginUsers().removeMember(selectedUser);
+                }
+                else System.out.println("SENDING FAILED MANAGING FAILED");
+                updateGroupUserList();
             }
             else if (button.getText().equals("User Info"))  {
                 CMUser CMTemp = m_serverStub.getLoginUsers().findMember(selectedUser);
                 Object message[] = {
                         CMTemp.getName(),
-                        CMTemp.getID(),
                         CMTemp.getPasswd()
                 };
+                updateGroupUserList();
                 int option = JOptionPane.showConfirmDialog(null, message, "Login Info", JOptionPane.OK_CANCEL_OPTION);
+            }
+            else if (button.getText().equals("Cancel")) {
+                return;
             }
         }
         public void valueChanged(ListSelectionEvent e)  {

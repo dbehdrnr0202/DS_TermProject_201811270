@@ -47,6 +47,7 @@ public class CMClientApp extends JFrame {
 
     private final int REQUEST_SESSION_INFO = 3;
     private final int REQUEST_CURRENT_GROUP_MEMEBERS =31;
+    private final int REQUEST_MY_INFO = 32;
 
     private final int REQUEST_FILE = 60;
     private final int PUSH_FILE = 61;
@@ -123,6 +124,9 @@ public class CMClientApp extends JFrame {
                 break;
             case REQUEST_CURRENT_GROUP_MEMEBERS:
                 requestCurrentGroupMembers();
+                break;
+            case REQUEST_MY_INFO:
+                requestMyInfo();
                 break;
             //file transmission
             case REQUEST_FILE:
@@ -278,6 +282,9 @@ public class CMClientApp extends JFrame {
                 case REQUEST_CURRENT_GROUP_MEMEBERS:
                     requestCurrentGroupMembers();
                     break;
+                case REQUEST_MY_INFO:
+                    requestMyInfo();
+                    break;
                 //file transmission
                 case REQUEST_FILE:
                     requestFile();
@@ -299,6 +306,8 @@ public class CMClientApp extends JFrame {
         printMsgln("Log Out: "+LOGOUT);
         printMsgln("====About Session===");
         printMsgln("Request Session Info: "+REQUEST_SESSION_INFO);
+        printMsgln("Request Current Group Members: "+REQUEST_CURRENT_GROUP_MEMEBERS);
+        printMsgln("Request My Info: "+REQUEST_MY_INFO);
         printMsgln("====About File===");
         printMsgln("Request File: "+REQUEST_FILE);
         printMsgln("Push File: "+PUSH_FILE);
@@ -370,6 +379,16 @@ public class CMClientApp extends JFrame {
         else    printMsgln("[requestSessionInfo] failed");
         printMsgln("=====================");
         return;
+    }
+    public void requestMyInfo() {
+        String userName = m_clientStub.getMyself().getName();
+        String userPassword = m_clientStub.getMyself().getPasswd();
+        printMsgln("");
+        Object[] message = {
+                "My User Name: ", userName,
+                "My Password: ", userPassword
+        };
+        int option = JOptionPane.showConfirmDialog(null, message, "My User Info", JOptionPane.OK_OPTION);
     }
     public void requestFile()   {
         String strFileName = null;
