@@ -39,7 +39,8 @@ public class CMClientApp extends JFrame {
 
     //command num
     private final int PRINTALLMENU = 0;
-    private final int STARTCM = 1;
+    private final int REGISTER_USER = 1;
+    private final int DEREGISTER_USER = 11;
     private final int TERMINATECM = 9;
 
     private final int LOGIN = 2;
@@ -106,6 +107,12 @@ public class CMClientApp extends JFrame {
         switch (nCommand) {
             case PRINTALLMENU:
                 printAllMenus();
+                break;
+            case REGISTER_USER:
+                registerUser();
+                break;
+            case DEREGISTER_USER:
+                deregisterUser();
                 break;
             //start, terminate cm
             case TERMINATECM:
@@ -299,18 +306,75 @@ public class CMClientApp extends JFrame {
 
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
-        printMsgln("====About CM===");
+        printMsgln("====About User Reg====");
+        printMsgln("Register User: "+REGISTER_USER);
+        printMsgln("Deregister User: "+DEREGISTER_USER);
+        printMsgln("====About CM====");
         printMsgln("Terminate CM: "+TERMINATECM);
-        printMsgln("====About Log In/Out===");
+        printMsgln("====About Log In/Ou=t===");
         printMsgln("Log In: "+LOGIN);
         printMsgln("Log Out: "+LOGOUT);
-        printMsgln("====About Session===");
+        printMsgln("====About Session====");
         printMsgln("Request Session Info: "+REQUEST_SESSION_INFO);
         printMsgln("Request Current Group Members: "+REQUEST_CURRENT_GROUP_MEMEBERS);
         printMsgln("Request My Info: "+REQUEST_MY_INFO);
-        printMsgln("====About File===");
+        printMsgln("====About File====");
         printMsgln("Request File: "+REQUEST_FILE);
         printMsgln("Push File: "+PUSH_FILE);
+    }
+    public void registerUser()  {
+        String userName = null;
+        String userPassword = null;
+
+        boolean ret = false;
+        JTextField userNameField = new JTextField();
+        JPasswordField userPasswordField = new JPasswordField();
+        Object[] message = {
+                "Enter User Name: ", userNameField,
+                "Enter Password: ", userPasswordField
+        };
+        int option = JOptionPane.showConfirmDialog(null, message, "Register User Info", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            userName = userNameField.getText();
+            userPassword = new String(userPasswordField.getPassword());
+            if (userName.equals("SERVER")) {
+                JOptionPane.showMessageDialog(null, "UserName SERVER is only for Server App", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (userName.equals("") ||userPassword.equals("")) {
+                JOptionPane.showMessageDialog(null, "User ID/PW is Empty", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            m_clientStub.registerUser(userName, userPassword);
+            JOptionPane.showMessageDialog(null, "User["+userName+"] Registered to Default Server");
+        }
+    }
+    public void deregisterUser()  {
+        String userName = null;
+        String userPassword = null;
+
+        boolean ret = false;
+        JTextField userNameField = new JTextField();
+        JPasswordField userPasswordField = new JPasswordField();
+        Object[] message = {
+                "Enter User Name: ", userNameField,
+                "Enter Password: ", userPasswordField
+        };
+        int option = JOptionPane.showConfirmDialog(null, message, "Deregister User Info", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            userName = userNameField.getText();
+            userPassword = new String(userPasswordField.getPassword());
+            if (userName.equals("SERVER")) {
+                JOptionPane.showMessageDialog(null, "UserName SERVER is only for Server App", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (userName.equals("") ||userPassword.equals("")) {
+                JOptionPane.showMessageDialog(null, "User ID/PW is Empty", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            m_clientStub.registerUser(userName, userPassword);
+            JOptionPane.showMessageDialog(null, "User["+userName+"] Registered to Default Server");
+        }
     }
     public void startCM()   {
         boolean bRet = m_clientStub.startCM();
@@ -351,6 +415,7 @@ public class CMClientApp extends JFrame {
                 JOptionPane.showMessageDialog(null, "User ID/PW is Empty", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
             ret = m_clientStub.loginCM(userName, userPassword);
             if (ret)
                 JOptionPane.showMessageDialog(null, "User["+userName+"] Successed to Login to Default Server");

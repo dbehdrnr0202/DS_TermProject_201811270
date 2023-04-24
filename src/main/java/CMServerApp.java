@@ -182,6 +182,9 @@ public class CMServerApp extends JFrame{
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
         printMsgln("Print Current Users: "+PRINTCURRENTUSERS);
+        printMsgln("Manage Current Users: "+MANAGECURRENTUSERS);
+        printMsgln("Request File: "+REQUESTFILE);
+        printMsgln("Push File: "+PUSHFILE);
         printMsgln("Terminate CM: "+TERMINATECM);
     }
     public void printCurrentUsers() {

@@ -57,6 +57,12 @@ public class CMServerEventHandler implements CMAppEventHandler {
         CMFileEvent fe = (CMFileEvent) cme;
         System.out.println("[processFileEvent]"+fe.getID());
         switch (fe.getID()) {
+            case CMFileEvent.REQUEST_PERMIT_PUSH_FILE:
+                m_server.printMsgln("User["+fe.getFileSender()+"] Requests to Permit Push File["+fe.getFileName()+"]");
+                if (m_serverStub.replyEvent(fe, 1))
+                    System.out.println("Server Accepted to Permit PUSH FILE");
+                else    System.out.println("Server Accepted to Permit PUSH FILE but replyEvent Failed");
+                break;
             case CMFileEvent.REPLY_PERMIT_PULL_FILE:
                 if(fe.getReturnCode() == -1) {
                     System.err.print("["+fe.getFileName()+"] does not exist in the owner!\n");

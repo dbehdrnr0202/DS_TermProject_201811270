@@ -52,7 +52,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 return;
         }
     }
-    private  void processLOGIN_ACK(CMSessionEvent se)   {
+    private void processLOGIN_ACK(CMSessionEvent se)   {
         //0: user authentication failed
         if(se.isValidUser() == 0)   {
             System.err.println("[SESSION_EVENT]This client fails authentication by the default server!");
@@ -138,7 +138,15 @@ public class CMClientEventHandler implements CMAppEventHandler {
                     System.err.println("[FILE_EVENT]"+fe.getFileSender()+" rejects to send file("+fe.getFileName()+").");
                 }
                 break;
-            case CMFileEvent.START_FILE_TRANSFER:
+            case CMFileEvent.REPLY_PERMIT_PUSH_FILE:
+                if (fe.getReturnCode()==1) {
+                    System.out.println("[FILE_EVENT]"+fe.getFileReceiver()+" Accepted to receive File["+fe.getFileName()+"]");
+                }
+                else if (fe.getReturnCode()==0)    {
+                    System.out.println("[FILE_EVENT]"+fe.getFileReceiver()+" Rejected to receive File["+fe.getFileName()+"]");
+                }
+                break;
+                case CMFileEvent.START_FILE_TRANSFER:
             case CMFileEvent.START_FILE_TRANSFER_CHAN:
                 printMsg("[FILE_EVENT]"+fe.getFileSender()+" is about to send file("+fe.getFileName()+").");
                 break;
