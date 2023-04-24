@@ -78,20 +78,23 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 break;
             case CMFileEvent.REPLY_PERMIT_PUSH_FILE:
                 if (fe.getReturnCode()==1) {
-                    System.out.println("[FILE_EVENT]"+fe.getFileReceiver()+" Accepted to receive File["+fe.getFileName()+"]");
+                    printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" Accepted to receive File["+fe.getFileName()+"]");
                 }
                 else if (fe.getReturnCode()==0)    {
-                    System.out.println("[FILE_EVENT]"+fe.getFileReceiver()+" Rejected to receive File["+fe.getFileName()+"]");
+                    printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" Rejected to receive File["+fe.getFileName()+"]");
                 }
                 break;
             case CMFileEvent.START_FILE_TRANSFER:
-            case CMFileEvent.START_FILE_TRANSFER_CHAN:
+            //case CMFileEvent.START_FILE_TRANSFER_CHAN:
                 printMsg("[FILE_EVENT]"+fe.getFileSender()+" is about to send file("+fe.getFileName()+").");
                 break;
             case CMFileEvent.END_FILE_TRANSFER:
-            case CMFileEvent.END_FILE_TRANSFER_CHAN:
+            //case CMFileEvent.END_FILE_TRANSFER_CHAN:
                 printMsg("[FILE_EVENT]"+fe.getFileSender()+" completes to send file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) to "+fe.getFileReceiver());
                 break;
+            case CMFileEvent.END_FILE_TRANSFER_ACK:
+            //case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
+                printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from "+fe.getFileSender());
             default:
                 break;
         }

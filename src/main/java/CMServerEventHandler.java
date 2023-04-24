@@ -82,12 +82,18 @@ public class CMServerEventHandler implements CMAppEventHandler {
                     System.err.print("file path(" + fe.getFilePath() + "), size(" + fe.getFileSize() + ").\n");
                 }
                 break;
-            case CMFileEvent.END_FILE_TRANSFER_CHAN:
-                printMsg("["+fe.getFileSender()+"] completes to send file("+fe.getFileName()+", "+fe.getFileSize()+" Bytes).");
-                String strFile = fe.getFileName();
+            case CMFileEvent.START_FILE_TRANSFER:
+            //case CMFileEvent.START_FILE_TRANSFER_CHAN:
+                printMsg("[FILE_EVENT]"+fe.getFileSender()+" is about to send file("+fe.getFileName()+").");
                 break;
-            case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
+            case CMFileEvent.END_FILE_TRANSFER:
+            //case CMFileEvent.END_FILE_TRANSFER_CHAN:
+                printMsg("[FILE_EVENT]"+fe.getFileSender()+" completes to send file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) to "+fe.getFileReceiver());
                 break;
+            case CMFileEvent.END_FILE_TRANSFER_ACK:
+            //case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
+                printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from "+fe.getFileSender());
+
             default:
                 break;
         }
