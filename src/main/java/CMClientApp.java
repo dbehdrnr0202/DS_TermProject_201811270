@@ -146,33 +146,26 @@ public class CMClientApp extends JFrame {
         }
     }
     public class MyActionListener implements ActionListener, ListSelectionListener {
-        public void actionPerformed(ActionEvent e)
-        {
+        public void actionPerformed(ActionEvent e)  {
             JButton button = (JButton) e.getSource();
-            if(button.getText().equals("Start Client CM"))
-            {
+            if(button.getText().equals("LogIn to Default CM Server")) {
                 // start cm
-                boolean bRet = m_clientStub.startCM();
-                if(!bRet)
-                {
-                    printStyledMsg("CM initialization error!\n", "bold");
-                }
-                else
-                {
+                if (login()) {
                     printStyledMsg("Client CM starts.\n", "bold");
                     printMsg("Type \"0\" for menu.\n");
                     // change button to "stop CM"
-                    button.setText("Stop Client CM");
+                    button.setText("LogOut from Default CM Server");
+
+                    m_inTextField.requestFocus();
                 }
-                m_inTextField.requestFocus();
             }
-            else if(button.getText().equals("LogOut to Default CM Server"))
-            {
+            else if(button.getText().equals("LogOut from Default CM Server")) {
                 // stop cm
-                m_clientStub.terminateCM();
-                printMsg("Client CM terminates.\n");
+                String userName = m_clientStub.getMyself().getName();
+                logout();
+                printMsg("User["+userName+"] LogOuted From Default CM Server.\n");
                 // change button to "start CM"
-                button.setText("Start Client CM");
+                button.setText("LogIn to Default CM Server");
             }
         }
         public void valueChanged(ListSelectionEvent e)  {
@@ -207,8 +200,7 @@ public class CMClientApp extends JFrame {
         StyleConstants.setBold(boldStyle, true);
 
         add(m_outTextPane, BorderLayout.CENTER);
-        JScrollPane scroll = new JScrollPane (m_outTextPane,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane scroll = new JScrollPane (m_outTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         add(scroll);
 
@@ -222,8 +214,7 @@ public class CMClientApp extends JFrame {
 
         m_logInOutButton = new JButton("LogIn to Default CM Server");
         m_logInOutButton.addActionListener(cmActionListener);
-        m_logInOutButton.setEnabled(false);
-        //add(startStopButton, BorderLayout.NORTH);
+        m_logInOutButton.setEnabled(true);
         topButtonPanel.add(m_logInOutButton);
 
         setVisible(true);
@@ -318,7 +309,7 @@ public class CMClientApp extends JFrame {
         printMsgln("Request Session Info: "+REQUEST_SESSION_INFO);
         printMsgln("Request Current Group Members: "+REQUEST_CURRENT_GROUP_MEMEBERS);
         printMsgln("Request My Info: "+REQUEST_MY_INFO);
-        printMsgln("====About File====");
+        printMsgln("====About File Transfer====");
         printMsgln("Request File: "+REQUEST_FILE);
         printMsgln("Push File: "+PUSH_FILE);
     }
@@ -383,7 +374,7 @@ public class CMClientApp extends JFrame {
             return;
         }
         m_bRun = true;
-        startMainSession();
+        //startMainSession();
     }
     public void terminateCM()   {
         int option  = JOptionPane.showConfirmDialog(null, "Really Want to Terminate CM?", "[TerminateCM]Confirm", JOptionPane.OK_CANCEL_OPTION);
@@ -392,7 +383,7 @@ public class CMClientApp extends JFrame {
         }
     }
 
-    public void login() {
+    public boolean login() {
         String userName = null;
         String userPassword = null;
 
@@ -409,19 +400,22 @@ public class CMClientApp extends JFrame {
             userPassword = new String(userPasswordField.getPassword());
             if (userName.equals("SERVER")) {
                 JOptionPane.showMessageDialog(null, "UserName SERVER is only for Server App", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
-                return;
+                return false;
             }
             if (userName.equals("") ||userPassword.equals("")) {
                 JOptionPane.showMessageDialog(null, "User ID/PW is Empty", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
-                return;
+                return false;
             }
 
             ret = m_clientStub.loginCM(userName, userPassword);
-            if (ret)
-                JOptionPane.showMessageDialog(null, "User["+userName+"] Successed to Login to Default Server");
+            if (ret) {
+                JOptionPane.showMessageDialog(null, "User[" + userName + "] Successed to Login to Default Server");
+                return true;
+            }
             else
                 JOptionPane.showMessageDialog(null, "User["+userName+"] Failed to Login to Default Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
         }
+        return false;
     }
 
     public void logout()    {

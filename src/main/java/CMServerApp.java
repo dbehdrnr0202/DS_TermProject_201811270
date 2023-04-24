@@ -83,15 +83,16 @@ public class CMServerApp extends JFrame{
         topButtonPanel.setLayout(new FlowLayout());
         add(topButtonPanel, BorderLayout.NORTH);
 
-        m_startStopButton = new JButton("Start Server CM");
+        m_startStopButton = new JButton("Stop Server CM");
         m_startStopButton.addActionListener(cmActionListener);
-        m_startStopButton.setEnabled(false);
+        m_startStopButton.setEnabled(true);
         //add(startStopButton, BorderLayout.NORTH);
         topButtonPanel.add(m_startStopButton);
 
         setVisible(true);
         m_serverStub = new CMServerStub();
         m_eventHandler = new CMServerEventHandler(m_serverStub, this);
+        printAllMenus();
     }
     public CMServerStub getServerStub()   {
         return m_serverStub;
@@ -123,7 +124,7 @@ public class CMServerApp extends JFrame{
             return;
         }
         m_bRun = true;
-        startMainSession();
+        //startMainSession();
     }
     public void startMainSession()  {
         printMsgln("server application main session starts.");
@@ -181,10 +182,13 @@ public class CMServerApp extends JFrame{
     }
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
+        printMsgln("====About User====");
         printMsgln("Print Current Users: "+PRINTCURRENTUSERS);
         printMsgln("Manage Current Users: "+MANAGECURRENTUSERS);
+        printMsgln("====About File Transfer====");
         printMsgln("Request File: "+REQUESTFILE);
         printMsgln("Push File: "+PUSHFILE);
+        printMsgln("====About CM====");
         printMsgln("Terminate CM: "+TERMINATECM);
     }
     public void printCurrentUsers() {
@@ -413,7 +417,7 @@ public class CMServerApp extends JFrame{
             else if(button.getText().equals("Stop Server CM")) {
                 // stop cm
                 m_serverStub.terminateCM();
-                printMsg("Server CM terminates.\n");
+                printStyledMsgln("Server CM terminates.\n", "bold");
                 // change button to "start CM"
                 button.setText("Start Server CM");
             }
