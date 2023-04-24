@@ -29,9 +29,11 @@ public class CMServerEventHandler implements CMAppEventHandler {
             case CMInfo.CM_FILE_EVENT:
                 processFileEvent(cme);
                 break;
+            /*
             case CMInfo.CM_USER_EVENT:
                 processUserEvent(cme);
                 break;
+            */
             default:
                 return;
         }
@@ -41,8 +43,10 @@ public class CMServerEventHandler implements CMAppEventHandler {
         CMDummyEvent de = (CMDummyEvent) cme;
         System.out.println("[processDummyEvent]");
         printMsg(de.getHandlerSession()+", "+de.getHandlerGroup());
+        printMsg("Dummy Sender: "+de.getSender());
         printMsg("Dummy msg: "+de.getDummyInfo());
     }
+    /*
     private void processUserEvent(CMEvent cme)  {
         CMUserEvent ue = (CMUserEvent) cme;
         System.out.println("[processUserEvent]");
@@ -53,6 +57,7 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
         }
     }
+    */
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
         System.out.println("[processFileEvent]"+fe.getID());
@@ -80,13 +85,8 @@ public class CMServerEventHandler implements CMAppEventHandler {
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
                 printMsg("["+fe.getFileSender()+"] completes to send file("+fe.getFileName()+", "+fe.getFileSize()+" Bytes).");
                 String strFile = fe.getFileName();
-                //if(m_bDistFileProc) {
-                //     processFile(fe.getFileSender(), strFile);
-                //    m_bDistFileProc = false;
-                //}
                 break;
             case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
-                //
                 break;
             default:
                 break;

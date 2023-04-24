@@ -273,6 +273,7 @@ public class CMServerApp extends JFrame{
         printStyledMsgln("[setFilePath Done]", "bold");
         printStyledMsgln("=====================================", "bold");
     }
+    /*
     public void requestFile()   {
         String strFileName = null;
         String strFileOwner = null;
@@ -314,7 +315,7 @@ public class CMServerApp extends JFrame{
         else printStyledMsgln("[pushFile Done]", "bold");
         printStyledMsgln("=====================================", "bold");
     }
-
+    */
     //about Processing Inputs/Outputs
     private void processInput(String strText) {
         int nCommand = -1;
@@ -346,13 +347,14 @@ public class CMServerApp extends JFrame{
             case TERMINATECM:
                 terminateCM();
                 break;
-
+            /*
             case REQUESTFILE:
                 requestFile();
                 break;
             case PUSHFILE:
                 pushFile();
                 break;
+            */
             default:
                 break;
         }
@@ -408,16 +410,13 @@ public class CMServerApp extends JFrame{
                     printStyledMsg("CM initialization error!\n", "bold");
                 else {
                     printStyledMsg("Server CM starts.\n", "bold");
-                    printMsg("Type \"0\" for menu.\n");
+                    printMsg("Type 0 for menu.\n");
                     // change button to "stop CM"
                     button.setText("Stop Server CM");
                 }
                 // check if default server or not
                 if(CMConfigurator.isDServer(m_serverStub.getCMInfo())) {
-                    setTitle("CM Default Server (\"SERVER\")");
-                }
-                else {
-                    setTitle("CM Additional Server (\"?\")");
+                    setTitle("CM Default Server (SERVER)");
                 }
                 m_inTextField.requestFocus();
             }
