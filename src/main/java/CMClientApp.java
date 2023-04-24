@@ -113,6 +113,7 @@ public class CMClientApp extends JFrame {
 
         //printMsgln("Client App terminated");
     }
+    /*
     public void startMainSession() {
         printMsgln("client application main session starts.");
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -170,7 +171,7 @@ public class CMClientApp extends JFrame {
             }
         }
     }
-
+    */
     //print menus
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
@@ -318,6 +319,7 @@ public class CMClientApp extends JFrame {
     }
 
     //about request Information
+    /*
     public void requestSessionInfo()    {
         printMsgln("==requestSessionInfo==");
         boolean ret = m_clientStub.requestSessionInfo();
@@ -328,6 +330,7 @@ public class CMClientApp extends JFrame {
         printMsgln("=====================");
         return;
     }
+    */
     public void requestMyInfo() {
         String userName = m_clientStub.getMyself().getName();
         String userPassword = m_clientStub.getMyself().getPasswd();
@@ -474,9 +477,11 @@ public class CMClientApp extends JFrame {
                 logout();
                 break;
             //about session information
+            /*
             case REQUEST_SESSION_INFO:
                 requestSessionInfo();
                 break;
+            */
             case REQUEST_CURRENT_GROUP_MEMEBERS:
                 requestCurrentGroupMembers();
                 break;

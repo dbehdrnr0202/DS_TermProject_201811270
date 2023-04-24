@@ -99,6 +99,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 break;
         }
     }
+
     private void processSessionEvent(CMEvent cme) {
         CMSessionEvent se = (CMSessionEvent)cme;
         switch(se.getID()) {
@@ -108,9 +109,11 @@ public class CMClientEventHandler implements CMAppEventHandler {
             case CMSessionEvent.LOGOUT:
                 processLOGOUT_ACK(se);
                 break;
+            /*
             case CMSessionEvent.RESPONSE_SESSION_INFO:
                 processRESPONSE_SESSION_INFO(se);
                 break;
+             */
             default:
                 return;
         }
@@ -139,7 +142,9 @@ public class CMClientEventHandler implements CMAppEventHandler {
         m_clientStub.disconnectFromServer();
     }
     //Receiving session info
+    /*
     private void processRESPONSE_SESSION_INFO(CMSessionEvent se)    {
+
         Iterator<CMSessionInfo> iter = se.getSessionInfoList().iterator();
         System.out.format("%-60s%n", "------------------------------------------------------------");
         System.out.format("%-20s%-20s%-10s%-10s%n", "name", "address", "port", "user num");
@@ -149,6 +154,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
             System.out.format("%-20s%-20s%-10d%-10d%n", tInfo.getSessionName(), tInfo.getAddress(), tInfo.getPort(), tInfo.getUserNum());
         }
     }
+     */
     private void processDataEvent(CMEvent se)    {
         CMDataEvent de = (CMDataEvent)se;
         switch (de.getID()) {
