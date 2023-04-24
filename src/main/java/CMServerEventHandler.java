@@ -39,13 +39,13 @@ public class CMServerEventHandler implements CMAppEventHandler {
 
     private void processDummyEvent(CMEvent cme) {
         CMDummyEvent de = (CMDummyEvent) cme;
-        printMsg("[processDummyEvent]");
+        System.out.println("[processDummyEvent]");
         printMsg(de.getHandlerSession()+", "+de.getHandlerGroup());
         printMsg("Dummy msg: "+de.getDummyInfo());
     }
     private void processUserEvent(CMEvent cme)  {
         CMUserEvent ue = (CMUserEvent) cme;
-        printMsg("[processUserEvent]");
+        System.out.println("[processUserEvent]");
         //
         switch (ue.getID()) {
 
@@ -95,7 +95,7 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private  void processSessionEvent(CMEvent cme)  {
         CMConfigurationInfo confInfo = m_serverStub.getCMInfo().getConfigurationInfo();
         CMSessionEvent se = (CMSessionEvent) cme;
-        printMsg("[procesSessionEvent]");
+        System.out.println("[procesSessionEvent]");
         switch (se.getID()) {
             case CMSessionEvent.LOGIN:
                 printMsg("["+se.getUserName()+"] requests login.");

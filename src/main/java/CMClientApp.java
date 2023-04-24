@@ -53,131 +53,7 @@ public class CMClientApp extends JFrame {
     private final int REQUEST_FILE = 60;
     private final int PUSH_FILE = 61;
 
-    public void printMsg(String strText) {
-        printStyledMsg(strText, null);
-    }
-    public void printMsgln(String strText) {
-        printMsg(strText+"\n");
-        return;
-    }
-    public void printStyledMsg(String strText, String strStyleName) {
-        StyledDocument doc = m_outTextPane.getStyledDocument();
-        try {
-            if (strStyleName==null)
-                doc.insertString(doc.getLength(), strText, null);
-            else doc.insertString(doc.getLength(), strText, doc.getStyle(strStyleName));
-            m_outTextPane.setCaretPosition(m_outTextPane.getDocument().getLength());
-        } catch (BadLocationException e) {
-            e.printStackTrace();
-        }
-        return;
-    }
-    public void printStyledMsgln(String strText, String strStyleName)   {
-        printStyledMsg(strText+"\n", strStyleName);
-        return;
-    }
-    public class MyKeyListener implements KeyListener {
-        public void keyPressed(KeyEvent e)
-        {
-            int key = e.getKeyCode();
-            if(key == KeyEvent.VK_ENTER)
-            {
-                JTextField input = (JTextField)e.getSource();
-                String strText = input.getText();
-                printMsg(strText+"\n");
-                // parse and call CM API
-                processInput(strText);
-                input.setText("");
-                input.requestFocus();
-            }
-        }
 
-        public void keyReleased(KeyEvent e){}
-        public void keyTyped(KeyEvent e){}
-    }
-    private void processInput(String strText) {
-        int nCommand = -1;
-        try{
-            nCommand = Integer.parseInt(strText);
-        }catch (NumberFormatException e)    {
-            printMsgln("Command Number Error");
-            return;
-        }
-
-        switch (nCommand) {
-            case PRINTALLMENU:
-                printAllMenus();
-                break;
-            case REGISTER_USER:
-                registerUser();
-                break;
-            case DEREGISTER_USER:
-                deregisterUser();
-                break;
-            //start, terminate cm
-            case TERMINATECM:
-                terminateCM();
-                break;
-            //login, logout
-            case LOGIN:
-                login();
-                break;
-            case LOGOUT:
-                logout();
-                break;
-            //about session information
-            case REQUEST_SESSION_INFO:
-                requestSessionInfo();
-                break;
-            case REQUEST_CURRENT_GROUP_MEMEBERS:
-                requestCurrentGroupMembers();
-                break;
-            case REQUEST_MY_INFO:
-                requestMyInfo();
-                break;
-            //file transmission
-            case REQUEST_FILE:
-                requestFile();
-                break;
-            case PUSH_FILE:
-                pushFile();
-                break;
-            default:
-        }
-    }
-    public class MyActionListener implements ActionListener, ListSelectionListener {
-        public void actionPerformed(ActionEvent e)  {
-            JButton button = (JButton) e.getSource();
-            if(button.getText().equals("LogIn to Default CM Server")) {
-                // start cm
-                if (login()) {
-                    printStyledMsg("Client CM starts.\n", "bold");
-                    printMsg("Type \"0\" for menu.\n");
-                    // change button to "stop CM"
-                    button.setText("LogOut from Default CM Server");
-
-                    m_inTextField.requestFocus();
-                }
-            }
-            else if(button.getText().equals("LogOut from Default CM Server")) {
-                // stop cm
-                String userName = m_clientStub.getMyself().getName();
-                logout();
-                printMsg("User["+userName+"] LogOuted From Default CM Server.\n");
-                // change button to "start CM"
-                button.setText("LogIn to Default CM Server");
-            }
-        }
-        public void valueChanged(ListSelectionEvent e)  {
-            JList list = (JList) e.getSource();
-            if (list.getSelectedIndex()!=-1)    {
-                String strToCopy = (String)list.getSelectedValue();
-                StringSelection str = new StringSelection(strToCopy);
-                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clipboard.setContents(str, null);
-            }
-        }
-    }
     public CMClientApp(){
         MyKeyListener cmKeyListener = new MyKeyListener();
         MyActionListener cmActionListener = new MyActionListener();
@@ -295,6 +171,7 @@ public class CMClientApp extends JFrame {
         }
     }
 
+    //print menus
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
         printMsgln("====About User Reg====");
@@ -313,6 +190,28 @@ public class CMClientApp extends JFrame {
         printMsgln("Request File: "+REQUEST_FILE);
         printMsgln("Push File: "+PUSH_FILE);
     }
+
+    //start/terminate CM
+    public void startCM()   {
+        boolean bRet = m_clientStub.startCM();
+        if(!bRet) {
+            System.err.println("CM initialization error!");
+            return;
+        }
+        m_bRun = true;
+        //startMainSession();
+    }
+    public void terminateCM()   {
+        int option  = JOptionPane.showConfirmDialog(null, "Really Want to Terminate CM?", "[TerminateCM]Confirm", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            m_clientStub.terminateCM();
+        }
+    }
+
+    //register/deregister user (But don't need now)
+    // need when cm-server.conf/LOGIN_SCHEME is 1(now 0)
+    // LOGIN_SCHEME 0: Don't need Authorization
+    //              1: Need Authorization
     public void registerUser()  {
         String userName = null;
         String userPassword = null;
@@ -367,22 +266,8 @@ public class CMClientApp extends JFrame {
             JOptionPane.showMessageDialog(null, "User["+userName+"] Registered to Default Server");
         }
     }
-    public void startCM()   {
-        boolean bRet = m_clientStub.startCM();
-        if(!bRet) {
-            System.err.println("CM initialization error!");
-            return;
-        }
-        m_bRun = true;
-        //startMainSession();
-    }
-    public void terminateCM()   {
-        int option  = JOptionPane.showConfirmDialog(null, "Really Want to Terminate CM?", "[TerminateCM]Confirm", JOptionPane.OK_CANCEL_OPTION);
-        if (option==JOptionPane.OK_OPTION)  {
-            m_clientStub.terminateCM();
-        }
-    }
 
+    //about Login, Logout
     public boolean login() {
         String userName = null;
         String userPassword = null;
@@ -410,6 +295,7 @@ public class CMClientApp extends JFrame {
             ret = m_clientStub.loginCM(userName, userPassword);
             if (ret) {
                 JOptionPane.showMessageDialog(null, "User[" + userName + "] Successed to Login to Default Server");
+                m_logInOutButton.setText("LogOut from Default CM Server");
                 return true;
             }
             else
@@ -417,18 +303,21 @@ public class CMClientApp extends JFrame {
         }
         return false;
     }
-
     public void logout()    {
         String userName = m_clientStub.getMyself().getName();
         int option  = JOptionPane.showConfirmDialog(null, "Really Want to LogOut From Default Server?", "[Logout]Confirm", JOptionPane.OK_CANCEL_OPTION);
         if (option==JOptionPane.OK_OPTION)  {
             boolean ret = m_clientStub.logoutCM();
-            if (ret)
-                JOptionPane.showMessageDialog(null, "User["+userName+"] Successed to Login to Default Server");
+            if (ret) {
+                JOptionPane.showMessageDialog(null, "User[" + userName + "] Successed to Login to Default Server");
+                m_logInOutButton.setText("LogIn to Default CM Server");
+            }
             else
                 JOptionPane.showMessageDialog(null, "User["+userName+"] Failed to Login to Default Server", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+    //about request Information
     public void requestSessionInfo()    {
         printMsgln("==requestSessionInfo==");
         boolean ret = m_clientStub.requestSessionInfo();
@@ -449,6 +338,32 @@ public class CMClientApp extends JFrame {
         };
         int option = JOptionPane.showConfirmDialog(null, message, "My User Info", JOptionPane.OK_OPTION);
     }
+    public JList getCurGroupUserJList() {
+        CMMember curGroupUsers = m_clientStub.getGroupMembers();
+        Vector<CMUser> vGroupUsers = curGroupUsers.getAllMembers();
+        Iterator<CMUser> iter = vGroupUsers.iterator();
+        JList curGroupUserList;
+        List<String> curGroupUserlist = new ArrayList<>();
+        while(iter.hasNext())   {
+            curGroupUserlist.add(iter.next().getName());
+        }
+        curGroupUserList = new JList(curGroupUserlist.toArray());
+        return curGroupUserList;
+    }
+    public void requestCurrentGroupMembers()    {
+        setVisible(true);
+        JList curGroupUserList = getCurGroupUserJList();
+        MyActionListener cmListSelectionListener = new MyActionListener();
+        curGroupUserList.addListSelectionListener(cmListSelectionListener);
+        Object[] message = {
+                "Client Users In Current Group(Except Me)",
+                curGroupUserList,
+        };
+        JOptionPane.showConfirmDialog(null, message, "Showing Current Group Members", JOptionPane.CLOSED_OPTION);
+    }
+
+
+    //about File Transfer
     public void requestFile()   {
         String strFileName = null;
         String strFileOwner = null;
@@ -527,27 +442,130 @@ public class CMClientApp extends JFrame {
         }
     }
 
-    public JList getCurGroupUserJList() {
-        CMMember curGroupUsers = m_clientStub.getGroupMembers();
-        Vector<CMUser> vGroupUsers = curGroupUsers.getAllMembers();
-        Iterator<CMUser> iter = vGroupUsers.iterator();
-        JList curGroupUserList;
-        List<String> curGroupUserlist = new ArrayList<>();
-        while(iter.hasNext())   {
-            curGroupUserlist.add(iter.next().getName());
+    //about Processing Inputs/Outputs
+    private void processInput(String strText) {
+        int nCommand = -1;
+        try{
+            nCommand = Integer.parseInt(strText);
+        }catch (NumberFormatException e)    {
+            printMsgln("Command Number Error");
+            return;
         }
-        curGroupUserList = new JList(curGroupUserlist.toArray());
-        return curGroupUserList;
+
+        switch (nCommand) {
+            case PRINTALLMENU:
+                printAllMenus();
+                break;
+            case REGISTER_USER:
+                registerUser();
+                break;
+            case DEREGISTER_USER:
+                deregisterUser();
+                break;
+            //start, terminate cm
+            case TERMINATECM:
+                terminateCM();
+                break;
+            //login, logout
+            case LOGIN:
+                login();
+                break;
+            case LOGOUT:
+                logout();
+                break;
+            //about session information
+            case REQUEST_SESSION_INFO:
+                requestSessionInfo();
+                break;
+            case REQUEST_CURRENT_GROUP_MEMEBERS:
+                requestCurrentGroupMembers();
+                break;
+            case REQUEST_MY_INFO:
+                requestMyInfo();
+                break;
+            //file transmission
+            case REQUEST_FILE:
+                requestFile();
+                break;
+            case PUSH_FILE:
+                pushFile();
+                break;
+            default:
+        }
     }
-    public void requestCurrentGroupMembers()    {
-        setVisible(true);
-        JList curGroupUserList = getCurGroupUserJList();
-        MyActionListener cmListSelectionListener = new MyActionListener();
-        curGroupUserList.addListSelectionListener(cmListSelectionListener);
-        Object[] message = {
-                "Client Users In Current Group(Except Me)",
-                curGroupUserList,
-        };
-        JOptionPane.showConfirmDialog(null, message, "Showing Current Group Members", JOptionPane.CLOSED_OPTION);
+    public void printMsg(String strText) {
+        printStyledMsg(strText, null);
+    }
+    public void printMsgln(String strText) {
+        printMsg(strText+"\n");
+        return;
+    }
+    public void printStyledMsg(String strText, String strStyleName) {
+        StyledDocument doc = m_outTextPane.getStyledDocument();
+        try {
+            if (strStyleName==null)
+                doc.insertString(doc.getLength(), strText, null);
+            else doc.insertString(doc.getLength(), strText, doc.getStyle(strStyleName));
+            m_outTextPane.setCaretPosition(m_outTextPane.getDocument().getLength());
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+        return;
+    }
+    public void printStyledMsgln(String strText, String strStyleName)   {
+        printStyledMsg(strText+"\n", strStyleName);
+        return;
+    }
+
+    //Listener classes
+    public class MyKeyListener implements KeyListener {
+        public void keyPressed(KeyEvent e) {
+            int key = e.getKeyCode();
+            if(key == KeyEvent.VK_ENTER) {
+                JTextField input = (JTextField)e.getSource();
+                String strText = input.getText();
+                printMsg(strText+"\n");
+                // parse and call CM API
+                processInput(strText);
+                input.setText("");
+                input.requestFocus();
+            }
+        }
+
+        public void keyReleased(KeyEvent e){}
+        public void keyTyped(KeyEvent e){}
+    }
+    public class MyActionListener implements ActionListener, ListSelectionListener {
+        public void actionPerformed(ActionEvent e)  {
+            JButton button = (JButton) e.getSource();
+            if(button.getText().equals("LogIn to Default CM Server")) {
+                // start cm
+                if (login()) {
+                    printStyledMsg("Client CM starts.\n", "bold");
+                    printMsg("Type \"0\" for menu.\n");
+                    // change button to "stop CM"
+                    button.setText("LogOut from Default CM Server");
+
+                    m_inTextField.requestFocus();
+                }
+            }
+            else if(button.getText().equals("LogOut from Default CM Server")) {
+                // stop cm
+                String userName = m_clientStub.getMyself().getName();
+                logout();
+                printMsg("User["+userName+"] LogOuted From Default CM Server.\n");
+                // change button to "start CM"
+                button.setText("LogIn to Default CM Server");
+            }
+        }
+        public void valueChanged(ListSelectionEvent e)  {
+            JList list = (JList) e.getSource();
+            if (list.getSelectedIndex()!=-1)    {
+                String strToCopy = (String)list.getSelectedValue();
+                StringSelection str = new StringSelection(strToCopy);
+                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                clipboard.setContents(str, null);
+            }
+        }
     }
 }

@@ -1,5 +1,6 @@
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
 import kr.ac.konkuk.ccslab.cm.entity.CMUser;
+import kr.ac.konkuk.ccslab.cm.event.CMDataEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
 import kr.ac.konkuk.ccslab.cm.info.CMInfo;
@@ -101,12 +102,6 @@ public class CMServerApp extends JFrame{
     public CMServerEventHandler getServerEventHandler() {
         return m_eventHandler;
     }
-    public void terminateCM()   {
-        int option  = JOptionPane.showConfirmDialog(null, "Really Want to Terminate CM?", "[TerminateCM]Confirm", JOptionPane.OK_CANCEL_OPTION);
-        if (option==JOptionPane.OK_OPTION)  {
-            m_serverStub.terminateCM();
-        }
-    }
 
     public static void main(String[] args)  {
         CMServerApp server = new CMServerApp();
@@ -116,6 +111,21 @@ public class CMServerApp extends JFrame{
 
         //printMsg("Server App terminated");
     }
+
+    //print menus
+    public void printAllMenus() {
+        printMsgln("Print All Menu: "+PRINTALLMENU);
+        printMsgln("====About User====");
+        printMsgln("Print Current Users: "+PRINTCURRENTUSERS);
+        printMsgln("Manage Current Users: "+MANAGECURRENTUSERS);
+        printMsgln("====About File Transfer====");
+        printMsgln("Request File: "+REQUESTFILE);
+        printMsgln("Push File: "+PUSHFILE);
+        printMsgln("====About CM====");
+        printMsgln("Terminate CM: "+TERMINATECM);
+    }
+
+    //start/terminate CM
     public void startCM()   {
         //start CM as a default session
         boolean bRet = m_serverStub.startCM();
@@ -126,13 +136,20 @@ public class CMServerApp extends JFrame{
         m_bRun = true;
         //startMainSession();
     }
+    public void terminateCM()   {
+        int option  = JOptionPane.showConfirmDialog(null, "Really Want to Terminate CM?", "[TerminateCM]Confirm", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION)  {
+            m_serverStub.terminateCM();
+        }
+    }
+    /*
     public void startMainSession()  {
         printMsgln("server application main session starts.");
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String strInput = null;
         int nCommand = -1;
         while(m_bRun) {
-            printMsgln("Type \"0\" for menu.");
+            printMsgln("Type 0 for menu.");
             printMsg("> ");
             try {
                 strInput = br.readLine();
@@ -151,11 +168,6 @@ public class CMServerApp extends JFrame{
                 case PRINTALLMENU:
                     printAllMenus();
                     break;
-                /*
-                case STARTCM:
-                    startCM();
-                    break;
-                */
                 case SETFILEPATH:
                     setFilePath();
                     break;
@@ -179,18 +191,9 @@ public class CMServerApp extends JFrame{
                     break;
             }
         }
-    }
-    public void printAllMenus() {
-        printMsgln("Print All Menu: "+PRINTALLMENU);
-        printMsgln("====About User====");
-        printMsgln("Print Current Users: "+PRINTCURRENTUSERS);
-        printMsgln("Manage Current Users: "+MANAGECURRENTUSERS);
-        printMsgln("====About File Transfer====");
-        printMsgln("Request File: "+REQUESTFILE);
-        printMsgln("Push File: "+PUSHFILE);
-        printMsgln("====About CM====");
-        printMsgln("Terminate CM: "+TERMINATECM);
-    }
+    }*/
+
+    //about Current Login Users
     public void printCurrentUsers() {
         printStyledMsgln("[printCurrentUsers]", "bold");
         CMMember loginUsers = m_serverStub.getLoginUsers();
@@ -245,6 +248,8 @@ public class CMServerApp extends JFrame{
         curGroupUserList = new JList(curGroupUserlist.toArray());
         return true;
     }
+
+    //about File Transfer
     public void setFilePath() {
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         printStyledMsgln("[setFilePath Starts]", "bold");
@@ -268,7 +273,6 @@ public class CMServerApp extends JFrame{
         printStyledMsgln("[setFilePath Done]", "bold");
         printStyledMsgln("=====================================", "bold");
     }
-
     public void requestFile()   {
         String strFileName = null;
         String strFileOwner = null;
@@ -310,23 +314,8 @@ public class CMServerApp extends JFrame{
         else printStyledMsgln("[pushFile Done]", "bold");
         printStyledMsgln("=====================================", "bold");
     }
-    public class MyKeyListener implements KeyListener {
-        public void keyPressed(KeyEvent e) {
-            int key = e.getKeyCode();
-            if(key == KeyEvent.VK_ENTER) {
-                JTextField input = (JTextField)e.getSource();
-                String strText = input.getText();
-                printMsg(strText+"\n");
-                processInput(strText);
-                input.setText("");
-                input.requestFocus();
-            }
-        }
 
-        public void keyReleased(KeyEvent e){}
-        public void keyTyped(KeyEvent e){}
-    }
-
+    //about Processing Inputs/Outputs
     private void processInput(String strText) {
         int nCommand = -1;
         try{
@@ -391,6 +380,24 @@ public class CMServerApp extends JFrame{
         printStyledMsg(strText+"\n", strStyleName);
         return;
     }
+
+    //Listener classes
+    public class MyKeyListener implements KeyListener {
+        public void keyPressed(KeyEvent e) {
+            int key = e.getKeyCode();
+            if(key == KeyEvent.VK_ENTER) {
+                JTextField input = (JTextField)e.getSource();
+                String strText = input.getText();
+                printMsg(strText+"\n");
+                processInput(strText);
+                input.setText("");
+                input.requestFocus();
+            }
+        }
+
+        public void keyReleased(KeyEvent e){}
+        public void keyTyped(KeyEvent e){}
+    }
     public class MyActionListener implements ActionListener, ListSelectionListener {
         public void actionPerformed(ActionEvent e) {
             JButton button = (JButton) e.getSource();
@@ -427,7 +434,17 @@ public class CMServerApp extends JFrame{
                 cse.setType(CMInfo.CM_SESSION_EVENT);
                 cse.setChannelName("Default Server");
                 if (m_serverStub.send((CMEvent) cse, selectedUser)) {
+                    CMDataEvent de = new CMDataEvent();
+                    CMUser cmUserTemp = m_serverStub.getLoginUsers().findMember(selectedUser);
+                    de.setID(CMDataEvent.REMOVE_USER);
+                    de.setType(CMInfo.CM_DATA_EVENT);
+                    de.setUserName(selectedUser);
+                    de.setHandlerGroup(cmUserTemp.getCurrentGroup());
+                    de.setHandlerSession(cmUserTemp.getCurrentSession());
+                    de.setSender("ADMIN");
                     m_serverStub.getLoginUsers().removeMember(selectedUser);
+
+                    m_serverStub.broadcast(de);
                 }
                 else System.out.println("SENDING FAILED MANAGING FAILED");
                 updateGroupUserList();
