@@ -196,9 +196,11 @@ public class CMClientApp extends JFrame {
     public void startCM()   {
         boolean bRet = m_clientStub.startCM();
         if(!bRet) {
+            JOptionPane.showMessageDialog(null, "There's No CM Server to Connect", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
             System.err.println("CM initialization error!");
             return;
         }
+        printAllMenus();
         m_bRun = true;
         //startMainSession();
     }
@@ -368,6 +370,11 @@ public class CMClientApp extends JFrame {
 
     //about File Transfer
     public void requestFile()   {
+        CMUser cmUserMySelf = m_clientStub.getMyself();
+        if (cmUserMySelf.getName()=="?") {
+            JOptionPane.showMessageDialog(null, "You Have To Log In to Use this Service", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         String strFileName = null;
         String strFileOwner = null;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -388,6 +395,11 @@ public class CMClientApp extends JFrame {
 
     }
     public void pushFile()  {
+        CMUser cmUserMySelf = m_clientStub.getMyself();
+        if (cmUserMySelf.getName()=="?") {
+            JOptionPane.showMessageDialog(null, "You Have To Log In to Use this Service", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         String strFilePath = null;
         String strReceiver = null;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -544,22 +556,17 @@ public class CMClientApp extends JFrame {
         public void actionPerformed(ActionEvent e)  {
             JButton button = (JButton) e.getSource();
             if(button.getText().equals("LogIn to Default CM Server")) {
-                // start cm
                 if (login()) {
                     printStyledMsg("Client CM starts.\n", "bold");
-                    printMsg("Type \"0\" for menu.\n");
-                    // change button to "stop CM"
+                    printMsg("Type 0 for menu.\n");
                     button.setText("LogOut from Default CM Server");
-
                     m_inTextField.requestFocus();
                 }
             }
             else if(button.getText().equals("LogOut from Default CM Server")) {
-                // stop cm
                 String userName = m_clientStub.getMyself().getName();
                 logout();
                 printMsg("User["+userName+"] LogOuted From Default CM Server.\n");
-                // change button to "start CM"
                 button.setText("LogIn to Default CM Server");
             }
         }

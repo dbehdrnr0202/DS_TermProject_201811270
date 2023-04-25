@@ -26,9 +26,11 @@ public class CMClientEventHandler implements CMAppEventHandler {
             case CMInfo.CM_DUMMY_EVENT:
                 processDummyEvent(cme);
                 break;
+            /*
             case CMInfo.CM_USER_EVENT:
                 processUserEvent(cme);
                 break;
+            */
             case CMInfo.CM_FILE_EVENT:
                 processFileEvent(cme);
                 break;
@@ -42,6 +44,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
         printMsg("[DUMMY_EVENT]Dummy msg "+de.getDummyInfo()+" from user"+de.getSender());
         return;
     }
+    /*
     private void processUserEvent(CMEvent cme)  {
         CMUserEvent ue = (CMUserEvent) cme;
         switch (ue.getStringID())   {
@@ -58,6 +61,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 System.err.println("[USER_EVENT]unknown CMUserEvent ID: "+ue.getStringID());
         }
     }
+    */
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
         System.out.println("[processFileEvent]"+fe.getID());
@@ -75,6 +79,12 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 else if(fe.getReturnCode() == 0) {
                     System.err.println("[FILE_EVENT]"+fe.getFileSender()+" rejects to send file("+fe.getFileName()+").");
                 }
+                break;
+            case CMFileEvent.REQUEST_PERMIT_PUSH_FILE:
+                printMsg("User["+fe.getFileSender()+"] Requests to Permit Push File["+fe.getFileName()+"]");
+                if (m_clientStub.replyEvent(fe, 1))
+                    printMsg("User["+fe.getFileReceiver()+"] Accepted to Permit PUSH FILE");
+                else    printMsg("User["+fe.getFileReceiver()+"] Accepted to Permit PUSH FILE but replyEvent Failed");
                 break;
             case CMFileEvent.REPLY_PERMIT_PUSH_FILE:
                 if (fe.getReturnCode()==1) {
@@ -102,6 +112,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
 
     private void processSessionEvent(CMEvent cme) {
         CMSessionEvent se = (CMSessionEvent)cme;
+        System.out.println("[procesSessionEvent]ID: "+se.getID());
         switch(se.getID()) {
             case CMSessionEvent.LOGIN_ACK:
                 processLOGIN_ACK(se);

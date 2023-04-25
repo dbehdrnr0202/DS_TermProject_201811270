@@ -101,7 +101,7 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private  void processSessionEvent(CMEvent cme)  {
         CMConfigurationInfo confInfo = m_serverStub.getCMInfo().getConfigurationInfo();
         CMSessionEvent se = (CMSessionEvent) cme;
-        System.out.println("[procesSessionEvent]");
+        System.out.println("[procesSessionEvent]ID: "+se.getID());
         switch (se.getID()) {
             case CMSessionEvent.LOGIN:
                 printMsg("["+se.getUserName()+"] requests login.");
