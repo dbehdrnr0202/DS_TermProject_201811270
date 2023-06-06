@@ -1,6 +1,9 @@
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
 import kr.ac.konkuk.ccslab.cm.entity.CMUser;
+import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
+import kr.ac.konkuk.ccslab.cm.event.CMEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
+import kr.ac.konkuk.ccslab.cm.info.CMInfo;
 import kr.ac.konkuk.ccslab.cm.manager.CMCommManager;
 import kr.ac.konkuk.ccslab.cm.manager.CMConfigurator;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
@@ -8,6 +11,7 @@ import kr.ac.konkuk.ccslab.cm.manager.CMFileTransferManager;
 
 import javax.imageio.IIOException;
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.text.*;
@@ -22,19 +26,31 @@ import java.io.BufferedReader;
 import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.io.File;
+import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CMClientApp extends JFrame {
     private CMClientStub m_clientStub;
     private CMClientEventHandler m_eventHandler;
-    private Scanner m_scanner;
     private JTextPane m_outTextPane;
+    private JTextPane m_fileListPane;
+    private JTextPane m_userListPane;
     private JTextField m_inTextField;
     private JButton m_logInOutButton;
-    private boolean m_bRun;
+    private JButton m_refreshUserListButton;
+    private JButton m_refreshFileListButton;
+    private JButton m_syncFileButton;
+    private JList m_userJList;
+    private JList m_fileJList;
+    private HashMap<Path, FileTime> curFileList;
+    private HashMap<Path, Integer> fileLogicalClock;
 
 
     //command num
@@ -52,51 +68,103 @@ public class CMClientApp extends JFrame {
 
     private final int REQUEST_FILE = 60;
     private final int PUSH_FILE = 61;
+    private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -1;
+    private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -11;
+    private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -2;
+    private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -21;
+
+    private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER = -3;
+    private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER = -31;
+    private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -4;
+    private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
+    private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
+    private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
 
 
+
+    private final int REQUEST_SYNC_FILE = -3;
+    //private final int
     public CMClientApp(){
         MyKeyListener cmKeyListener = new MyKeyListener();
         MyActionListener cmActionListener = new MyActionListener();
-        setTitle("CM Client");
         setSize(500, 500);
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         setLayout(new BorderLayout());
 
         m_outTextPane = new JTextPane();
         m_outTextPane.setEditable(false);
+        m_outTextPane.setSize(500, 400);
+        m_fileListPane = new JTextPane();
+        m_fileListPane.setEditable(false);
+        m_userListPane = new JTextPane();
+        m_userListPane.setEditable(false);
 
-        StyledDocument doc = m_outTextPane.getStyledDocument();
-        Style defStyle = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);
+        m_fileJList = new JList();
+        m_userJList = new JList();
 
-        Style regularStyle = doc.addStyle("regular", defStyle);
+        StyledDocument output_doc = m_outTextPane.getStyledDocument();
+        Style output_defStyle = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);
+
+        Style regularStyle = output_doc.addStyle("regular", output_defStyle);
         StyleConstants.setFontFamily(regularStyle, "SansSerif");
 
-        Style boldStyle = doc.addStyle("bold", defStyle);
+        Style boldStyle = output_doc.addStyle("bold", output_defStyle);
         StyleConstants.setBold(boldStyle, true);
 
-        add(m_outTextPane, BorderLayout.CENTER);
-        JScrollPane scroll = new JScrollPane (m_outTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JPanel userListPanel = new JPanel();
+        JPanel fileListPanel = new JPanel();
+        m_syncFileButton = new JButton("Sync Files");
+        m_syncFileButton.addActionListener(cmActionListener);
+        m_syncFileButton.setEnabled(true);
+        m_refreshFileListButton = new JButton("Refresh FileList");
+        m_refreshFileListButton.addActionListener(cmActionListener);
+        m_refreshFileListButton.setEnabled(true);
+        fileListPanel.add(m_refreshFileListButton);
+        fileListPanel.add(m_syncFileButton);
+        fileListPanel.add(m_fileJList, BorderLayout.SOUTH);
+        fileListPanel.setBorder(new TitledBorder("FILE LIST"));
+
+        m_refreshUserListButton = new JButton("Refresh UserList");
+        m_refreshUserListButton.addActionListener(cmActionListener);
+        m_refreshUserListButton.setEnabled(true);
+        userListPanel.add(m_refreshUserListButton);
+        userListPanel.add(m_userJList, BorderLayout.SOUTH);
+        userListPanel.setBorder(new TitledBorder("USER LIST"));
+
+        JScrollPane scroll = new JScrollPane(m_outTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane user_scroll = new JScrollPane(m_userListPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane file_scroll = new JScrollPane(m_userListPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         add(scroll);
+        add(user_scroll);
+        add(file_scroll);
 
         m_inTextField = new JTextField();
         m_inTextField.addKeyListener(cmKeyListener);
-        add(m_inTextField, BorderLayout.SOUTH);
 
         JPanel topButtonPanel = new JPanel();
         topButtonPanel.setLayout(new FlowLayout());
-        add(topButtonPanel, BorderLayout.NORTH);
+        //add(topButtonPanel, BorderLayout.NORTH);
 
         m_logInOutButton = new JButton("LogIn to Default CM Server");
         m_logInOutButton.addActionListener(cmActionListener);
         m_logInOutButton.setEnabled(true);
         topButtonPanel.add(m_logInOutButton);
+        add(topButtonPanel, BorderLayout.NORTH);
 
+        JPanel panel = new JPanel();
+        panel.add(fileListPanel, BorderLayout.WEST);
+        panel.add(userListPanel, BorderLayout.EAST);
+        panel.add(m_outTextPane, BorderLayout.SOUTH);
+        add(panel, BorderLayout.CENTER);
+        add(m_inTextField, BorderLayout.SOUTH);
+
+        //pack();
         setVisible(true);
         m_clientStub = new CMClientStub();
         m_eventHandler = new CMClientEventHandler(m_clientStub, this);
-        m_scanner = new Scanner((System.in));
     }
     public CMClientStub getClientStub() {
         return m_clientStub;
@@ -104,7 +172,7 @@ public class CMClientApp extends JFrame {
     public CMClientEventHandler getClientEventHandler() {
         return m_eventHandler;
     }
-    public static void main(String[] args)  {
+    public static void main(String[] args) throws IOException {
         CMClientApp client = new CMClientApp();
         CMClientStub cmStub = client.getClientStub();
         CMClientEventHandler eventHandler = client.getClientEventHandler();
@@ -113,65 +181,7 @@ public class CMClientApp extends JFrame {
 
         //printMsgln("Client App terminated");
     }
-    /*
-    public void startMainSession() {
-        printMsgln("client application main session starts.");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        String strInput = null;
-        int nCommand = -1;
-        while(m_bRun) {
-            printMsgln("Type \"0\" for menu.");
-            System.out.print("> ");
-            try {
-                strInput = br.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-                continue;
-            }
-            try {
-                nCommand = Integer.parseInt(strInput);
-            } catch (NumberFormatException e) {
-                printMsgln("Incorrect command format!");
-                continue;
-            }
 
-            switch (nCommand) {
-                case PRINTALLMENU:
-                    printAllMenus();
-                    break;
-                //start, terminate cm
-                case TERMINATECM:
-                    terminateCM();
-                    break;
-                //login, logout
-                case LOGIN:
-                    login();
-                    break;
-                case LOGOUT:
-                    logout();
-                    break;
-                //about session information
-                case REQUEST_SESSION_INFO:
-                    requestSessionInfo();
-                    break;
-                case REQUEST_CURRENT_GROUP_MEMEBERS:
-                    requestCurrentGroupMembers();
-                    break;
-                case REQUEST_MY_INFO:
-                    requestMyInfo();
-                    break;
-                //file transmission
-                case REQUEST_FILE:
-                    requestFile();
-                    break;
-                case PUSH_FILE:
-                    pushFile();
-                    break;
-                default:
-            }
-        }
-    }
-    */
     //print menus
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
@@ -193,15 +203,16 @@ public class CMClientApp extends JFrame {
     }
 
     //start/terminate CM
-    public void startCM()   {
+    public void startCM() throws IOException {
         boolean bRet = m_clientStub.startCM();
         if(!bRet) {
             JOptionPane.showMessageDialog(null, "There's No CM Server to Connect", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
             System.err.println("CM initialization error!");
             return;
         }
+        refreshUserList();
+        refreshFileList();
         printAllMenus();
-        m_bRun = true;
         //startMainSession();
     }
     public void terminateCM()   {
@@ -367,27 +378,52 @@ public class CMClientApp extends JFrame {
         JOptionPane.showConfirmDialog(null, message, "Showing Current Group Members", JOptionPane.CLOSED_OPTION);
     }
 
-
-    //about File Transfer
-    public void requestFile()   {
-        CMUser cmUserMySelf = m_clientStub.getMyself();
-        if (cmUserMySelf.getName()=="?") {
-            JOptionPane.showMessageDialog(null, "You Have To Log In to Use this Service", "ERROR_MESSAGE", JOptionPane.ERROR_MESSAGE);
+    public void refreshUserList()   {
+        DefaultListModel<String> model = new DefaultListModel();
+        Vector<CMUser> curUserList = this.m_clientStub.getGroupMembers().getAllMembers();
+        Iterator<CMUser> iter = curUserList.iterator();
+        if (curUserList.isEmpty())  {
+            model.addElement("Empty List");
+            this.m_userJList.setModel(model);
             return;
         }
-        String strFileName = null;
-        String strFileOwner = null;
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        printMsgln("====== request a file");
-        try {
-            System.out.print("File name: ");
-            strFileName = br.readLine();
-            System.out.print("File owner(server name): ");
-            strFileOwner = br.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
+        while(iter.hasNext())   {
+            model.addElement(iter.next().getName());
         }
-        boolean bRet = m_clientStub.requestFile(strFileName, strFileOwner);
+        this.m_userJList.setModel(model);
+
+    }
+    public void refreshFileList() throws IOException {
+        DefaultListModel<String> model = new DefaultListModel();
+        HashMap<Path, FileTime> recentFileList = new HashMap<>();
+        Path defaultFilePath = this.m_clientStub.getTransferedFileHome();
+        this.curFileList = new HashMap<>();
+        List<Path> result;
+        result = Files.walk(defaultFilePath).collect(Collectors.toList());
+        for (Path path:result)  {
+            if (path==defaultFilePath)
+                continue;
+            model.addElement(path.toString());
+            FileTime lastModifiedTime = (FileTime) Files.getAttribute(path, "lastModifiedTime");
+            recentFileList.put(path, lastModifiedTime);
+        }
+        m_fileJList.setModel(model);
+        curFileList = recentFileList;
+    }
+    public void syncFiles() throws IOException {
+        CMDummyEvent cme = new CMDummyEvent();
+
+        cme.setType(0);
+        cme.setDummyInfo("sync file request");
+        //m_clientStub.send(cme);
+        //List<FileTime> recentLastModifiedTimeList = new ArrayList<>();
+        //for (Map.Entry<Path, FileTime> entrySet : curFileList.entrySet())   {
+
+        //}
+    }
+    //about File Transfer
+    public void requestFile()   {
+        boolean bRet = m_clientStub.requestFile("데이터아키텍처 준전문가 가이드(2020.08.29.).pdf", "SERVER");
         if (bRet)
             printMsgln("[requestFile] success");
         else
@@ -436,24 +472,46 @@ public class CMClientApp extends JFrame {
             strReceiver = recvField.getText();
             if (strReceiver.equals(""))
                 strReceiver = "SERVER";
+
             for(File file:files)    {
+
+                String filename = file.getName();
                 String filePath = file.getPath();
-                boolean ret = m_clientStub.pushFile(filePath, strReceiver);
+                String fileSender = m_clientStub.getMyself().getName();
+                CMDummyEvent request_cme = new CMDummyEvent();
+                request_cme.setType(CMInfo.CM_DUMMY_EVENT);
+                request_cme.setID(PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
+                request_cme.setDummyInfo(filename+","+filePath+","+strReceiver+","+fileSender);
+                request_cme.setSender(m_clientStub.getMyself().getName());
+                //if (strReceiver!="SERVER")
+                //    m_clientStub.send(request_cme, "SERVER");
+                printMsgln("======START to Push File===========");
+                boolean ret = m_clientStub.pushFile(filePath, "SERVER");
                 if (ret) {
                     if (strReceiver.equals("SERVER"))
                         printMsgln("User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to [Default Server]");
+                    //서버를 거쳐서 보낼 경우
                     else
-                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to User["+strReceiver+"]");
+                        printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to USER");
+                    /*else
+                    {
+                        CMDummyEvent cme = new CMDummyEvent();
+                        cme.setType(CMInfo.CM_DUMMY_EVENT);
+                        cme.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
+                        cme.setDummyInfo(request_cme.getDummyInfo());
+                        cme.setSender(m_clientStub.getMyself().getName());
+                        m_clientStub.send(cme, "SERVER");
+                        printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to [Default Server]");
+                    }*/
+
                 }
-                else    {
+                else {
                     if (strReceiver.equals("SERVER"))
-                        printMsgln("User["+m_clientStub.getMyself().getName()+"] Failed to push File["+file.getName()+"] to [Default Server]");
+                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Failed to push File[" + file.getName() + "] to [Default Server]");
                     else
-                        printMsgln("User["+m_clientStub.getMyself().getName()+"] Failed to push File["+file.getName()+"] to User["+strReceiver+"]");
+                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Failed to push File[" + file.getName() + "] to User[" + strReceiver + "]");
                 }
-
             }
-
         }
     }
 
@@ -568,6 +626,23 @@ public class CMClientApp extends JFrame {
                 logout();
                 printMsg("User["+userName+"] LogOuted From Default CM Server.\n");
                 button.setText("LogIn to Default CM Server");
+            }
+            else if (button.getText().equals("Refresh UserList"))   {
+                refreshUserList();
+            }
+            else if (button.getText().equals("Refresh FileList"))   {
+                try {
+                    refreshFileList();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+            else if (button.getText().equals("Sync Files")) {
+                try {
+                    syncFiles();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         }
         public void valueChanged(ListSelectionEvent e)  {

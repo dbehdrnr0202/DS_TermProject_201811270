@@ -21,12 +21,9 @@ import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.nio.file.*;
+import java.util.*;
 import java.util.List;
-import java.util.Vector;
 
 public class CMServerApp extends JFrame{
     private CMServerStub m_serverStub;
@@ -47,11 +44,22 @@ public class CMServerApp extends JFrame{
     private final int SETFILEPATH = 4;
     private final int PUSHFILE = 61;
     private final int REQUESTFILE = 60;
+    private Path server_file_path;
+    //파일명, timestamp pair의 hashmap
+    private HashMap<String, Integer> file_list;
+    private WatchService service;
 
-
-    public CMServerApp()    {
+    public CMServerApp() throws IOException {
         MyKeyListener cmKeyListener = new MyKeyListener();
         MyActionListener cmActionListener = new MyActionListener();
+        /////////기말 내용/////////////////
+        /*
+        file_list = new HashMap<String, Integer>();
+        service = FileSystems.getDefault().newWatchService();
+        server_file_path = m_serverStub.getCMInfo().getConfigurationInfo().getTransferedFileHome();
+        server_file_path.register(service, StandardWatchEventKinds.ENTRY_MODIFY);
+        */
+        //////////////////////////////////
         selectedUser = null;
         setTitle("CM Server");
         setSize(500, 500);
@@ -103,7 +111,7 @@ public class CMServerApp extends JFrame{
         return m_eventHandler;
     }
 
-    public static void main(String[] args)  {
+    public static void main(String[] args) throws IOException {
         CMServerApp server = new CMServerApp();
         CMServerStub cmStub = server.getServerStub();
         cmStub.setAppEventHandler(server.getServerEventHandler());
@@ -111,7 +119,25 @@ public class CMServerApp extends JFrame{
 
         //printMsg("Server App terminated");
     }
-
+    public void file_list_add(String file_name)    {
+        this.file_list.put(file_name, 0);
+    }
+    public boolean file_list_update(String file_name, int modified_file_timestamp)  {
+        if (this.file_list.isEmpty())   {
+            System.out.println("file_list_update error: file_list is empty");
+            return false;
+        }
+        if (!this.file_list.containsKey(file_name)) {
+            System.out.println("file_list_update error: no entry has a file name: " + file_name);
+            return false;
+        }
+        int cur_file_timestamp = this.file_list.get(file_name);
+        if (modified_file_timestamp > cur_file_timestamp) {
+            this.file_list.put(file_name, modified_file_timestamp);
+            return true;
+        }
+        else return false;
+    }
     //print menus
     public void printAllMenus() {
         printMsgln("Print All Menu: "+PRINTALLMENU);
@@ -142,57 +168,6 @@ public class CMServerApp extends JFrame{
             m_serverStub.terminateCM();
         }
     }
-    /*
-    public void startMainSession()  {
-        printMsgln("server application main session starts.");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        String strInput = null;
-        int nCommand = -1;
-        while(m_bRun) {
-            printMsgln("Type 0 for menu.");
-            printMsg("> ");
-            try {
-                strInput = br.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-                continue;
-            }
-            try {
-                nCommand = Integer.parseInt(strInput);
-            } catch (NumberFormatException e) {
-                printMsgln("Incorrect command format!");
-                continue;
-            }
-
-            switch (nCommand) {
-                case PRINTALLMENU:
-                    printAllMenus();
-                    break;
-                case SETFILEPATH:
-                    setFilePath();
-                    break;
-                case PRINTCURRENTUSERS:
-                    printCurrentUsers();
-                    break;
-                case MANAGECURRENTUSERS:
-                    manageCurrentUsers();
-                    break;
-                case TERMINATECM:
-                    terminateCM();
-                    break;
-
-                case REQUESTFILE:
-                    requestFile();
-                    break;
-                case PUSHFILE:
-                    pushFile();
-                    break;
-                default:
-                    break;
-            }
-        }
-    }*/
-
     //about Current Login Users
     public void printCurrentUsers() {
         printStyledMsgln("[printCurrentUsers]", "bold");
@@ -351,10 +326,11 @@ public class CMServerApp extends JFrame{
             case REQUESTFILE:
                 requestFile();
                 break;
-            case PUSHFILE:
-                pushFile();
-                break;
             */
+            case 61:
+                m_serverStub.pushFile("C:\\Users\\Hi\\IdeaProjects\\DistributedSystem\\CM_Maven\\CMApp\\server-file-path\\1\\데이터아키텍처 준전문가 가이드(2020.08.29.).pdf", "2");
+                break;
+
             default:
                 break;
         }
