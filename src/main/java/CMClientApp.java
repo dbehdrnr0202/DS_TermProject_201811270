@@ -47,11 +47,13 @@ public class CMClientApp extends JFrame {
     private JButton m_refreshUserListButton;
     private JButton m_refreshFileListButton;
     private JButton m_syncFileButton;
+    private JButton m_pushFileButton;
+    private JButton m_setPathButton;
     private JList m_userJList;
     private JList m_fileJList;
     private HashMap<Path, FileTime> curFileList;
     private HashMap<Path, Integer> fileLogicalClock;
-
+    private String savedFilePath;
 
     //command num
     private final int PRINTALLMENU = 0;
@@ -79,14 +81,25 @@ public class CMClientApp extends JFrame {
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
-
-
-
     private final int REQUEST_SYNC_FILE = -3;
     //private final int
     public CMClientApp(){
+        makeUI();
+        m_clientStub = new CMClientStub();
+        m_eventHandler = new CMClientEventHandler(m_clientStub, this);
+        savedFilePath = m_clientStub.getTransferedFileHome().toAbsolutePath().toString();
+    }
+    public CMClientStub getClientStub() {
+        return m_clientStub;
+    }
+    public CMClientEventHandler getClientEventHandler() {
+        return m_eventHandler;
+    }
+    public String getSavedFilePath()    { return savedFilePath; }
+    private void makeUI()   {
         MyKeyListener cmKeyListener = new MyKeyListener();
         MyActionListener cmActionListener = new MyActionListener();
+
         setSize(500, 500);
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -115,14 +128,23 @@ public class CMClientApp extends JFrame {
 
         JPanel userListPanel = new JPanel();
         JPanel fileListPanel = new JPanel();
+        m_setPathButton = new JButton("Set File Path");
+        m_setPathButton.addActionListener(cmActionListener);
+        m_setPathButton.setEnabled(true);
         m_syncFileButton = new JButton("Sync Files");
         m_syncFileButton.addActionListener(cmActionListener);
         m_syncFileButton.setEnabled(true);
         m_refreshFileListButton = new JButton("Refresh FileList");
         m_refreshFileListButton.addActionListener(cmActionListener);
         m_refreshFileListButton.setEnabled(true);
+        m_pushFileButton = new JButton("Push Files");
+        m_pushFileButton.addActionListener(cmActionListener);
+        m_pushFileButton.setEnabled(true);
+
         fileListPanel.add(m_refreshFileListButton);
         fileListPanel.add(m_syncFileButton);
+        fileListPanel.add(m_pushFileButton);
+        fileListPanel.add(m_setPathButton);
         fileListPanel.add(m_fileJList, BorderLayout.SOUTH);
         fileListPanel.setBorder(new TitledBorder("FILE LIST"));
 
@@ -134,12 +156,12 @@ public class CMClientApp extends JFrame {
         userListPanel.setBorder(new TitledBorder("USER LIST"));
 
         JScrollPane scroll = new JScrollPane(m_outTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        JScrollPane user_scroll = new JScrollPane(m_userListPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane user_scroll = new JScrollPane(m_fileListPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         JScrollPane file_scroll = new JScrollPane(m_userListPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         add(scroll);
-        add(user_scroll);
-        add(file_scroll);
+        userListPanel.add(user_scroll);
+        fileListPanel.add(file_scroll);
 
         m_inTextField = new JTextField();
         m_inTextField.addKeyListener(cmKeyListener);
@@ -163,14 +185,7 @@ public class CMClientApp extends JFrame {
 
         //pack();
         setVisible(true);
-        m_clientStub = new CMClientStub();
-        m_eventHandler = new CMClientEventHandler(m_clientStub, this);
-    }
-    public CMClientStub getClientStub() {
-        return m_clientStub;
-    }
-    public CMClientEventHandler getClientEventHandler() {
-        return m_eventHandler;
+
     }
     public static void main(String[] args) throws IOException {
         CMClientApp client = new CMClientApp();
@@ -478,40 +493,35 @@ public class CMClientApp extends JFrame {
                 String filename = file.getName();
                 String filePath = file.getPath();
                 String fileSender = m_clientStub.getMyself().getName();
-                CMDummyEvent request_cme = new CMDummyEvent();
-                request_cme.setType(CMInfo.CM_DUMMY_EVENT);
-                request_cme.setID(PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
-                request_cme.setDummyInfo(filename+","+filePath+","+strReceiver+","+fileSender);
-                request_cme.setSender(m_clientStub.getMyself().getName());
-                //if (strReceiver!="SERVER")
-                //    m_clientStub.send(request_cme, "SERVER");
-                printMsgln("======START to Push File===========");
-                boolean ret = m_clientStub.pushFile(filePath, "SERVER");
-                if (ret) {
-                    if (strReceiver.equals("SERVER"))
-                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to [Default Server]");
-                    //서버를 거쳐서 보낼 경우
-                    else
-                        printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to USER");
-                    /*else
-                    {
-                        CMDummyEvent cme = new CMDummyEvent();
-                        cme.setType(CMInfo.CM_DUMMY_EVENT);
-                        cme.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
-                        cme.setDummyInfo(request_cme.getDummyInfo());
-                        cme.setSender(m_clientStub.getMyself().getName());
-                        m_clientStub.send(cme, "SERVER");
-                        printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to [Default Server]");
-                    }*/
-
-                }
+                CMDummyEvent request_de = new CMDummyEvent();
+                request_de.setType(CMInfo.CM_DUMMY_EVENT);
+                request_de.setID(PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
+                request_de.setDummyInfo(filename+","+filePath+","+strReceiver+","+fileSender);
+                request_de.setSender(m_clientStub.getMyself().getName());
+                if (strReceiver!="SERVER")
+                    m_clientStub.send(request_de, "SERVER");
                 else {
-                    if (strReceiver.equals("SERVER"))
-                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Failed to push File[" + file.getName() + "] to [Default Server]");
+                    printMsgln("======START to Push File===========");
+                    boolean ret = m_clientStub.pushFile(filePath, "SERVER");
+                    if (ret)
+                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + file.getName() + "] to [Default Server]");
                     else
-                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Failed to push File[" + file.getName() + "] to User[" + strReceiver + "]");
+                        printMsgln("User[" + m_clientStub.getMyself().getName() + "] Failed to push File[" + file.getName() + "] to [Default Server]");
                 }
             }
+        }
+    }
+    public void setSavedFilePath()   {
+        JTextField filepathField = new JTextField();
+        Object[] message = {
+                "Current File Path(Absolute Path): ", getSavedFilePath(),
+                "Enter New File Path: ", filepathField
+        };
+        int option = JOptionPane.showConfirmDialog(null, message, "Set FilePath", JOptionPane.OK_CANCEL_OPTION);
+        if (option==JOptionPane.OK_OPTION) {
+            String sNewPath = filepathField.getText();
+            Path newPath = Paths.get(filepathField.getText());
+            m_clientStub.setTransferedFileHome(newPath);
         }
     }
 
@@ -643,6 +653,12 @@ public class CMClientApp extends JFrame {
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
+            }
+            else if (button.getText().equals("Push Files")) {
+                pushFile();
+            }
+            else if (button.getText().equals("Set File Path"))  {
+                setSavedFilePath();
             }
         }
         public void valueChanged(ListSelectionEvent e)  {

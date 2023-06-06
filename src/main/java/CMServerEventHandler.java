@@ -28,14 +28,14 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
-    private final HashMap<PushEvent, Boolean> pushEventMap;
+    private final HashMap<PushEvent, String> pushEventMap;
+    private boolean isProccessingFile2;
+    private String viaTranferFileInfo;
     private class PushEvent{
         public String filename;
-        public String receiver;
         public String sender;
-        public PushEvent(String filename, String receiver, String sender)  {
+        public PushEvent(String filename, String sender)  {
             this.filename = filename;
-            this.receiver = receiver;
             this.sender = sender;
         }
     }
@@ -43,6 +43,8 @@ public class CMServerEventHandler implements CMAppEventHandler {
         m_serverStub = serverStub;
         m_server = server;
         pushEventMap = new HashMap<>();
+        this.isProccessingFile2 = false;
+        this.viaTranferFileInfo = null;
     }
     @Override
     public void processEvent(CMEvent cme)   {
@@ -74,7 +76,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
         CMDummyEvent de = (CMDummyEvent) cme;
         CMDummyEvent send_de = new CMDummyEvent();
         send_de.setType(CMInfo.CM_DUMMY_EVENT);
-        System.out.println("[processDummyEvent]");
         String filename = de.getDummyInfo().split(",")[0];
         String receiver = de.getDummyInfo().split(",")[2];
         String fileSender =de.getDummyInfo().split(",")[3];
@@ -83,8 +84,9 @@ public class CMServerEventHandler implements CMAppEventHandler {
         String sender = de.getSender();
         switch (de.getID()) {
             case PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
-                PushEvent pe = new PushEvent(filename, receiver, fileSender);
-                pushEventMap.put(pe, false);
+                this.viaTranferFileInfo = de.getDummyInfo();
+                PushEvent pe = new PushEvent(filename, fileSender);
+                pushEventMap.put(pe, receiver);
                 printMsg("PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
                 send_de.setID(ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
                 send_de.setDummyInfo(de.getDummyInfo());
@@ -98,10 +100,17 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
             case ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
                 printMsg("ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
-                boolean ret = m_serverStub.pushFile("C:\\Users\\Hi\\IdeaProjects\\DistributedSystem\\CM_Maven\\CMApp\\server-file-path\\t2\\데이터아키텍처 준전문가 가이드(2020.08.29.).pdf", "t1");
+                String dummyInfo = de.getDummyInfo();
+                printMsg("[DUMY INFO] From ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2: "+dummyInfo);
+                String p = dummyInfo.split(",")[1];
+                String r = dummyInfo.split(",")[2];
+                //TimeUnit.SECONDS.sleep(10);
+                this.isProccessingFile2 = true;
+                boolean ret = m_serverStub.pushFile(p, r);
                 printMsg("server is pushing file to user result: "+ret);
-                send_de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
-                m_serverStub.send(send_de, receiver);
+                //이 부분 때문인거같다~
+                //send_de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
+                //m_serverStub.send(send_de, receiver);
                 break;
             case END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
                 printMsg("END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
@@ -109,28 +118,30 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 send_de.setDummyInfo(de.getDummyInfo());
                 m_serverStub.send(send_de, sender);
                 break;
-           /*
-            case ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
-                printMsg("ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
+            case ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER:
+                printMsg("ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER");
+                printMsg("===PUSH_FILE_TO_CLIENT_VIA_SERVER is Done===");
+                printMsg("============================================");
                 send_de.setID(PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
-                m_serverStub.send(send_de, receiver);
-                //printMsg("========START to send FILE"+filePath+filename);
-                //send_de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
-                //m_serverStub.send(send_de, receiver);
-                //m_serverStub.pushFile(filePath, receiver);
                 break;
-            */
+            case END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
+                printMsg("END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
+                send_de.setID(ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
+                m_serverStub.send(send_de, receiver);
+                break;
             case ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
                 printMsg("ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
+
                 send_de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER);
                 send_de.setDummyInfo(de.getDummyInfo());
+                this.isProccessingFile2 = false;
                 m_serverStub.send(send_de, receiver);
                 m_serverStub.send(send_de, fileSender);
                 break;
         }
         //printMsg(de.getHandlerSession()+", "+de.getHandlerGroup());
         //printMsg("Dummy Sender: "+de.getSender());
-        printMsg("Dummy msg: "+de.getDummyInfo());
+        //printMsg("Dummy msg: "+de.getDummyInfo());
     }
     /*
     private void processUserEvent(CMEvent cme)  {
@@ -170,6 +181,9 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
             case CMFileEvent.REPLY_PERMIT_PUSH_FILE:
                 printMsg("REPLY_PERMIT_PUSH_FILE");
+                //2번에서 이걸 받고 나서 왜 START_FILE_TRANSFER을 안 하지?
+                fe.setReceiver(fe.getFileReceiver());
+                fe.setSender(fe.getFileSender());
                 if(fe.getReturnCode() == 0) {
                     System.err.print("[" + fe.getFileReceiver() + "] rejected the push-file request!\n");
                     System.err.print("file path(" + fe.getFilePath() + "), size(" + fe.getFileSize() + ").\n");
@@ -194,9 +208,19 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
             case CMFileEvent.END_FILE_TRANSFER_ACK:
                 printMsg("END_FILE_TRANSFER_ACK");
+                CMDummyEvent send_de = new CMDummyEvent();
+                if (this.isProccessingFile2==true)   {
+                    send_de.setType(CMInfo.CM_DUMMY_EVENT);
+                    send_de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
+                    receiver = fe.getFileReceiver();
+                    send_de.setDummyInfo(this.viaTranferFileInfo);
+                    send_de.setSender("SERVER");
+                    send_de.setReceiver(receiver);
+                    m_serverStub.send(send_de, receiver);
+                }
+                break;
             //case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
                 //printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from "+fe.getFileSender());
-
             default:
                 break;
         }

@@ -21,6 +21,8 @@ public class CMClientEventHandler implements CMAppEventHandler {
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
     private boolean isProccessingFile;
+    private boolean isProccessingFile2;
+
     private String processingFileInfo;
     private CMClientStub m_clientStub;
     private CMClientApp m_client;
@@ -28,6 +30,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
         m_clientStub = stub;
         m_client = client;
         this.isProccessingFile = false;
+        this.isProccessingFile2 = false;
     }
     @Override
     public void processEvent(CMEvent cme) {
@@ -70,6 +73,8 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 this.isProccessingFile = true;
                 this.processingFileInfo = de.getDummyInfo();
                 printMsg("ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
+                printMsg("start to send file: "+filename);
+                m_clientStub.pushFile(filePath, "SERVER");
                 break;
             case ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
                 this.isProccessingFile = false;
@@ -78,9 +83,12 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 m_clientStub.send(send_de, "SERVER");
                 break;
             case PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
+                this.isProccessingFile = true;
                 printMsg("PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
                 send_de.setID(ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
                 m_clientStub.send(send_de, "SERVER");
+                this.processingFileInfo = de.getDummyInfo();
+                this.isProccessingFile2 = true;
                 //printMsg("========START to request FILE: "+filename);
                 //CMServerStub tempServerStub = new CMServerStub();
                 //String filePath = tempServerStub.getTransferedFileHome().toString()+"\\"+fileSender+"\\"+filename;
@@ -94,20 +102,25 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 m_clientStub.send(send_de, "SERVER");
                 break;
             case END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
+                this.isProccessingFile = false;
                 printMsg("END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
                 send_de.setID(ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
                 m_clientStub.send(send_de, "SERVER");
                 break;
             case END_PUSH_FILE_TO_CLIENT_VIA_SERVER:
                 printMsg("END_PUSH_FILE_TO_CLIENT_VIA_SERVER");
+                printMsg("===PUSH_FILE_TO_CLIENT_VIA_SERVER is Done===");
+                printMsg("============================================");
                 send_de.setID(ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER);
                 m_clientStub.send(send_de, "SERVER");
+                break;
+            default:
                 break;
         }
         //printMsg(de.getHandlerSession()+", "+de.getHandlerGroup());
 
-        printMsg("Dummy Sender: "+de.getSender());
-        printMsg("Dummy msg: "+de.getDummyInfo());
+        //printMsg("Dummy Sender: "+de.getSender());
+        //printMsg("Dummy msg: "+de.getDummyInfo());
     }
     /*
     private void processUserEvent(CMEvent cme)  {
@@ -171,9 +184,19 @@ public class CMClientEventHandler implements CMAppEventHandler {
             //case CMFileEvent.END_FILE_TRANSFER_CHAN:
                 printMsg("END_FILE_TRANSFER");
                 m_clientStub.replyEvent(fe, 1);
-                if (isProccessingFile==true)    {
+                //receiver가 받아야하는 것
+                /*if (isProccessingFile2==true)    {
+                    CMDummyEvent de = new CMDummyEvent();
+                    de.setType(CMInfo.CM_DUMMY_EVENT);
+                    de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
+                    de.setDummyInfo(this.processingFileInfo);
+                    de.setSender(m_clientStub.getMyself().getName());
+                    m_clientStub.send(de, "SERVER");
                     m_client.printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + processingFileInfo.split(",")[0] + "] to [Default Server]");
-                }
+                }*/
+                break;
+            case CMFileEvent.CONTINUE_FILE_TRANSFER:
+                String info = fe.getFileName();
                 break;
             case CMFileEvent.END_FILE_TRANSFER_ACK:
                 printMsg("END_FILE_TRANSFER_ACK");
@@ -185,9 +208,11 @@ public class CMClientEventHandler implements CMAppEventHandler {
                     de.setDummyInfo(this.processingFileInfo);
                     de.setSender(m_clientStub.getMyself().getName());
                     m_clientStub.send(de, "SERVER");
+                    m_client.printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + processingFileInfo.split(",")[0] + "] to [Default Server]");
                 }
                 printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from "+fe.getFileSender());
                 printMsg("========START to send END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
+                break;
             default:
                 break;
         }
