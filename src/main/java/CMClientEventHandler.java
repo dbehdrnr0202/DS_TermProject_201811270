@@ -6,10 +6,10 @@ import kr.ac.konkuk.ccslab.cm.info.*;
 import kr.ac.konkuk.ccslab.cm.event.*;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
+import java.nio.file.Path;
 import java.util.Iterator;
 
 public class CMClientEventHandler implements CMAppEventHandler {
-    private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -1;
     private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -11;
     private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -2;
     private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -21;
@@ -20,17 +20,30 @@ public class CMClientEventHandler implements CMAppEventHandler {
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
+    private final int SEND_TIME_INFO = -9;
+    private final int SEND_TIME_INFO_MODIFIED = -91;
+    private final int SEND_TIME_INFO_NOT_MODIFIED = -92;
+    private final int REQUEST_TIME_INFO = -10;
+    private final int REQUEST_DELETE_FILE = -55;
+    private final int REQUEST_DELETE_FILE_ACK = -551;
     private boolean isProccessingFile;
-    private boolean isProccessingFile2;
 
     private String processingFileInfo;
     private CMClientStub m_clientStub;
     private CMClientApp m_client;
+    public class FileTimeInfo{
+        public long lastModifiedTime;
+        public int logicalTime;
+        public FileTimeInfo(long modifiedTime, int logicalTime) {
+            this.lastModifiedTime = modifiedTime;
+            this.logicalTime = logicalTime;
+        }
+    }
+
     public CMClientEventHandler(CMClientStub stub, CMClientApp client) {
         m_clientStub = stub;
         m_client = client;
         this.isProccessingFile = false;
-        this.isProccessingFile2 = false;
     }
     @Override
     public void processEvent(CMEvent cme) {
@@ -59,6 +72,30 @@ public class CMClientEventHandler implements CMAppEventHandler {
 
     private void processDummyEvent(CMEvent cme) {
         CMDummyEvent de = (CMDummyEvent) cme;
+        int eventId = de.getID();
+        switch (eventId)    {
+            case SEND_TIME_INFO_MODIFIED:
+                printMsg("SEND_TIME_INFO_MODIFIED");
+                printMsg("서버가 내 파일의 정보로 갱신함");
+                String filepath = m_clientStub.getTransferedFileHome()+"\\"+de.getDummyInfo().split(",")[0];
+                m_clientStub.pushFile(filepath, "SERVER");
+                return;
+            case SEND_TIME_INFO_NOT_MODIFIED:
+                printMsg("SEND_TIME_INFO_NOT_MODIFIED");
+                printMsg("서버의 파일의 정보이 더 최신이라 client의 clock을 갱신함");
+                String recvFileName = de.getDummyInfo().split(",")[0];
+                int recvLogicalClock = Integer.parseInt(de.getDummyInfo().split(",")[1]);
+                m_clientStub.requestFile(recvFileName, "SERVER");
+                this.m_client.fileLogicalClock2.put(recvFileName, recvLogicalClock);
+                return;
+            case REQUEST_DELETE_FILE_ACK:
+                printMsg("REQUEST_DELETE_FILE_ACK");
+                printMsg("SERVER deleted file: "+de.getDummyInfo());
+                m_client.filesToDeleteMap.remove(de.getDummyInfo());
+                return;
+            default://file transfer via server event
+                break;
+        }
         CMDummyEvent send_de = new CMDummyEvent();
         send_de.setType(CMInfo.CM_DUMMY_EVENT);
         System.out.println("[processDummyEvent]");
@@ -88,13 +125,6 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 send_de.setID(ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
                 m_clientStub.send(send_de, "SERVER");
                 this.processingFileInfo = de.getDummyInfo();
-                this.isProccessingFile2 = true;
-                //printMsg("========START to request FILE: "+filename);
-                //CMServerStub tempServerStub = new CMServerStub();
-                //String filePath = tempServerStub.getTransferedFileHome().toString()+"\\"+fileSender+"\\"+filename;
-
-                //boolean ret = m_clientStub.requestFile(filename, "t2");
-                //printMsg("Request Result ret:"+ret);
                 break;
             case END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
                 printMsg("END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
@@ -184,16 +214,6 @@ public class CMClientEventHandler implements CMAppEventHandler {
             //case CMFileEvent.END_FILE_TRANSFER_CHAN:
                 printMsg("END_FILE_TRANSFER");
                 m_clientStub.replyEvent(fe, 1);
-                //receiver가 받아야하는 것
-                /*if (isProccessingFile2==true)    {
-                    CMDummyEvent de = new CMDummyEvent();
-                    de.setType(CMInfo.CM_DUMMY_EVENT);
-                    de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
-                    de.setDummyInfo(this.processingFileInfo);
-                    de.setSender(m_clientStub.getMyself().getName());
-                    m_clientStub.send(de, "SERVER");
-                    m_client.printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + processingFileInfo.split(",")[0] + "] to [Default Server]");
-                }*/
                 break;
             case CMFileEvent.CONTINUE_FILE_TRANSFER:
                 String info = fe.getFileName();
@@ -228,11 +248,6 @@ public class CMClientEventHandler implements CMAppEventHandler {
             case CMSessionEvent.LOGOUT:
                 processLOGOUT_ACK(se);
                 break;
-            /*
-            case CMSessionEvent.RESPONSE_SESSION_INFO:
-                processRESPONSE_SESSION_INFO(se);
-                break;
-             */
             default:
                 return;
         }

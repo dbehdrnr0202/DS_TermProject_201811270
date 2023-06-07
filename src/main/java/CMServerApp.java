@@ -49,6 +49,9 @@ public class CMServerApp extends JFrame{
     private HashMap<String, Integer> file_list;
     private WatchService service;
 
+    private final int SEND_TIME_INFO = -9;
+    private final int REQUEST_TIME_INFO = -10;
+
     public CMServerApp() throws IOException {
         MyKeyListener cmKeyListener = new MyKeyListener();
         MyActionListener cmActionListener = new MyActionListener();

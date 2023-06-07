@@ -9,6 +9,14 @@ import org.apache.commons.math3.util.Pair;
 
 import javax.swing.text.BadLocationException;
 import javax.swing.text.StyledDocument;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Time;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
@@ -28,21 +36,27 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
-    private final HashMap<PushEvent, String> pushEventMap;
+    private final int SEND_TIME_INFO = -9;
+    private final int SEND_TIME_INFO_MODIFIED = -91;
+    private final int SEND_TIME_INFO_NOT_MODIFIED = -92;
+    private final int REQUEST_TIME_INFO = -10;
+    private final int REQUEST_DELETE_FILE = -55;
+    private final int REQUEST_DELETE_FILE_ACK = -551;
+    private final HashMap<String, FileInfo> fileListMap;
     private boolean isProccessingFile2;
     private String viaTranferFileInfo;
-    private class PushEvent{
-        public String filename;
-        public String sender;
-        public PushEvent(String filename, String sender)  {
-            this.filename = filename;
-            this.sender = sender;
+    public class FileInfo {
+        public int logicalTime;
+        public ArrayList<String> users;
+        public FileInfo(int logicalTime, ArrayList<String> users)    {
+            this.users = users;
+            this.logicalTime = logicalTime;
         }
     }
     public CMServerEventHandler(CMServerStub serverStub, CMServerApp server)    {
         m_serverStub = serverStub;
         m_server = server;
-        pushEventMap = new HashMap<>();
+        fileListMap = new HashMap<>();
         this.isProccessingFile2 = false;
         this.viaTranferFileInfo = null;
     }
@@ -55,38 +69,125 @@ public class CMServerEventHandler implements CMAppEventHandler {
             case CMInfo.CM_DUMMY_EVENT:
                 try {
                     processDummyEvent(cme);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException | IOException e) {
                     throw new RuntimeException(e);
                 }
                 break;
             case CMInfo.CM_FILE_EVENT:
                 processFileEvent(cme);
                 break;
-            /*
-            case CMInfo.CM_USER_EVENT:
-                processUserEvent(cme);
-                break;
-            */
             default:
                 return;
         }
     }
 
-    private void processDummyEvent(CMEvent cme) throws InterruptedException {
+    private void processDummyEvent(CMEvent cme) throws InterruptedException, IOException {
         CMDummyEvent de = (CMDummyEvent) cme;
         CMDummyEvent send_de = new CMDummyEvent();
         send_de.setType(CMInfo.CM_DUMMY_EVENT);
+        String filePath = m_serverStub.getTransferedFileHome().toString();
+        //Time stamp 관련
+        int eventId = de.getID();
+        switch (eventId)    {
+            case REQUEST_DELETE_FILE:
+                String filename = de.getDummyInfo();
+                Path pFilePath = Paths.get(filePath+"\\"+de.getSender()+"\\"+filename);;
+                printMsg("REQUEST_DELETE_FILE");
+                printMsg("Start to Delete File: "+filename+" in user["+de.getSender()+"]");
+                Files.delete(pFilePath);
+                send_de.setSender("SERVER");
+                send_de.setReceiver(de.getSender());
+                send_de.setID(REQUEST_DELETE_FILE_ACK);
+                send_de.setDummyInfo(filename);
+                m_serverStub.send(send_de, de.getSender());
+                return;
+            case SEND_TIME_INFO:
+                printMsg("SEND_TIME_INFO");
+                String recvFileName = de.getDummyInfo().split(",")[0];
+                int recvLogicalTime = Integer.parseInt(de.getDummyInfo().split(",")[1]);
+
+                if (!fileListMap.isEmpty()) {
+                    //clock 정보가 있을 경우
+                    if (fileListMap.containsKey(recvFileName))  {
+                        //conflict 발생 안 함 ->YES라고 답변해야함, 그리고 갱신함
+                        long l1 =fileListMap.get(recvFileName).logicalTime;
+                        if (l1 < recvLogicalTime)  {
+                            FileInfo savedFileInfo = this.fileListMap.get(recvFileName);
+                            savedFileInfo.logicalTime= recvLogicalTime;
+                            fileListMap.put(recvFileName, savedFileInfo);
+                            Path FilePath = Paths.get(filePath+"\\"+de.getSender()+"\\"+recvFileName);;
+                            Files.delete(FilePath);
+
+                            send_de.setID(SEND_TIME_INFO_MODIFIED);
+                            send_de.setDummyInfo(recvFileName+","+recvLogicalTime);
+                            //m_serverStub.requestFile(recvFileName, de.getSender());
+                        }
+                        //conflict 발생함 -> NO 라고 답변해야함
+                        else {
+                            send_de.setID(SEND_TIME_INFO_NOT_MODIFIED);
+                            FileInfo savedFileInfo = this.fileListMap.get(recvFileName);
+                            send_de.setDummyInfo(recvFileName+","+savedFileInfo);
+                        }
+                    }
+                    //clock 정보가 없을 경우(처음으로 받는 정보)
+                    else {
+                        ArrayList<String> userArr = new ArrayList<>();
+                        userArr.add(de.getSender());
+                        userArr.add(de.getReceiver());
+                        FileInfo fileInfo = new FileInfo(recvLogicalTime, userArr);
+                        fileListMap.put(recvFileName, fileInfo);
+                        send_de.setID(SEND_TIME_INFO_MODIFIED);
+                        send_de.setDummyInfo(de.getDummyInfo());
+                    }
+                }
+                else {
+                    ArrayList<String> userArr = new ArrayList<>();
+                    userArr.add(de.getSender());
+                    userArr.add(de.getReceiver());
+                    FileInfo fileInfo = new FileInfo(recvLogicalTime, userArr);
+                    fileListMap.put(recvFileName, fileInfo);
+                    send_de.setID(SEND_TIME_INFO_MODIFIED);
+                    send_de.setDummyInfo(de.getDummyInfo());
+                }
+                m_serverStub.send(send_de, de.getSender());
+                return;
+            default://file transfer via server event
+                break;
+        }
+
         String filename = de.getDummyInfo().split(",")[0];
         String receiver = de.getDummyInfo().split(",")[2];
         String fileSender =de.getDummyInfo().split(",")[3];
-        String filePath = m_serverStub.getTransferedFileHome().toString()+"\\"+fileSender+"\\"+filename;
-
+        filePath = m_serverStub.getTransferedFileHome().toString()+"\\"+fileSender+"\\"+filename;
         String sender = de.getSender();
-        switch (de.getID()) {
+        switch (eventId) {
             case PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
                 this.viaTranferFileInfo = de.getDummyInfo();
-                PushEvent pe = new PushEvent(filename, fileSender);
-                pushEventMap.put(pe, receiver);
+                //이미 있던거
+                if (fileListMap.isEmpty()) {
+                    ArrayList<String> arr = new ArrayList<>();
+                    arr.add(sender);
+                    arr.add(receiver);
+                    FileInfo info =  new FileInfo(0, arr);
+                    fileListMap.put(filename, info);
+                }
+                else {
+                    if (fileListMap.get(filename).users.contains(fileSender))    {
+                        ArrayList<String> arr = fileListMap.get(filename).users;
+                        arr.add(receiver);
+                        FileInfo info =  new FileInfo(fileListMap.get(filename).logicalTime+1, arr);
+                        fileListMap.put(filename, info);
+                    }
+                    else {
+                        //없던 새로운 것
+                        ArrayList<String> arr = new ArrayList<>();
+                        arr.add(sender);
+                        arr.add(receiver);
+                        FileInfo info =  new FileInfo(0, arr);
+                        fileListMap.put(filename, info);
+
+                    }
+                }
                 printMsg("PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
                 send_de.setID(ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
                 send_de.setDummyInfo(de.getDummyInfo());
@@ -108,9 +209,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 this.isProccessingFile2 = true;
                 boolean ret = m_serverStub.pushFile(p, r);
                 printMsg("server is pushing file to user result: "+ret);
-                //이 부분 때문인거같다~
-                //send_de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
-                //m_serverStub.send(send_de, receiver);
                 break;
             case END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
                 printMsg("END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
@@ -131,7 +229,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
             case ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
                 printMsg("ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
-
                 send_de.setID(END_PUSH_FILE_TO_CLIENT_VIA_SERVER);
                 send_de.setDummyInfo(de.getDummyInfo());
                 this.isProccessingFile2 = false;
@@ -139,22 +236,8 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 m_serverStub.send(send_de, fileSender);
                 break;
         }
-        //printMsg(de.getHandlerSession()+", "+de.getHandlerGroup());
-        //printMsg("Dummy Sender: "+de.getSender());
-        //printMsg("Dummy msg: "+de.getDummyInfo());
     }
-    /*
-    private void processUserEvent(CMEvent cme)  {
-        CMUserEvent ue = (CMUserEvent) cme;
-        System.out.println("[processUserEvent]");
-        //
-        switch (ue.getID()) {
 
-            default:
-                break;
-        }
-    }
-    */
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
         System.out.println("[processFileEvent]"+fe.getID());
