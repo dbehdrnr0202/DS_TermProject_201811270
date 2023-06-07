@@ -350,10 +350,6 @@ public class CMClientApp extends JFrame {
         }
         m_fileJList.setModel(model);
     }
-    public static boolean isFileExists(File file) {
-        return file.exists() && !file.isDirectory();
-    }
-
     public void requestDelFile(String delFileName)  {
         requestDelFile(delFileName, "SERVER");
     }
@@ -391,14 +387,6 @@ public class CMClientApp extends JFrame {
         }
     }
     //about File Transfer
-    public void requestFile()   {
-        boolean bRet = m_clientStub.requestFile("데이터아키텍처 준전문가 가이드(2020.08.29.).pdf", "SERVER");
-        if (bRet)
-            printMsgln("[requestFile] success");
-        else
-            System.err.println("[requestFile] failed");
-
-    }
     public void pushFile()  {
         CMUser cmUserMySelf = m_clientStub.getMyself();
         if (cmUserMySelf.getName()=="?") {
@@ -471,14 +459,6 @@ public class CMClientApp extends JFrame {
                 }
             }
         }
-    }
-    public int requestTimeInfo(String filename, String receiver)  {
-        CMDummyEvent de = new CMDummyEvent();
-        de.setDummyInfo(filename);
-        de.setID(REQUEST_TIME_INFO);
-        de.setSender(m_clientStub.getMyself().getName());
-        m_clientStub.send(de, receiver);
-        return 0;
     }
     public boolean sendTimeInfo(String receiver, String filename, int logicalTime)  {
         CMDummyEvent de = new CMDummyEvent();

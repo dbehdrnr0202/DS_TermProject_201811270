@@ -8,6 +8,7 @@ import kr.ac.konkuk.ccslab.cm.manager.CMConfigurator;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.text.*;
@@ -22,21 +23,25 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.*;
+import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CMServerApp extends JFrame{
     private CMServerStub m_serverStub;
     private CMServerEventHandler m_eventHandler;
-    private boolean m_bRun;
     private JTextPane m_outTextPane;
-    private JTextField m_inTextField;
+    private JTextPane m_fileListPane;
+    private JTextPane m_userListPane;
     private JButton m_startStopButton;
+    private JButton m_refreshUserListButton;
+    private JButton m_refreshFileListButton;
     private JList curGroupUserList;
-    private DefaultListModel listModel;
+    private JList m_userJList;
+    private JList m_fileJList;
     private String selectedUser = null;
     private final int PRINTALLMENU = 0;
-    private final int STARTCM = 1;
     private final int TERMINATECM = 9;
     private final int PRINTCURRENTUSERS = 3;
     private final int MANAGECURRENTUSERS = 31;
@@ -44,25 +49,86 @@ public class CMServerApp extends JFrame{
     private final int SETFILEPATH = 4;
     private final int PUSHFILE = 61;
     private final int REQUESTFILE = 60;
-    private Path server_file_path;
     //파일명, timestamp pair의 hashmap
-    private HashMap<String, Integer> file_list;
-    private WatchService service;
-
-    private final int SEND_TIME_INFO = -9;
-    private final int REQUEST_TIME_INFO = -10;
 
     public CMServerApp() throws IOException {
+        makeUI();
+        m_serverStub = new CMServerStub();
+        m_eventHandler = new CMServerEventHandler(m_serverStub, this);
+    }
+    public void makeUI(){
+        MyActionListener cmActionListener = new MyActionListener();
+
+        setSize(800, 600);
+
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        setLayout(new BorderLayout());
+
+        m_outTextPane = new JTextPane();
+        m_outTextPane.setSize(600, 400);
+        m_outTextPane.setEditable(false);
+        m_fileListPane = new JTextPane();
+        m_fileListPane.setEditable(false);
+        m_userListPane = new JTextPane();
+        m_userListPane.setEditable(false);
+
+        m_fileJList = new JList();
+        m_userJList = new JList();
+
+        StyledDocument output_doc = m_outTextPane.getStyledDocument();
+        Style output_defStyle = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);
+
+        Style regularStyle = output_doc.addStyle("regular", output_defStyle);
+        StyleConstants.setFontFamily(regularStyle, "SansSerif");
+
+        Style boldStyle = output_doc.addStyle("bold", output_defStyle);
+        StyleConstants.setBold(boldStyle, true);
+
+        JPanel userListPanel = new JPanel();
+        JPanel fileListPanel = new JPanel();
+        fileListPanel.setSize(100, 200);
+        fileListPanel.setSize(500, 200);
+        m_refreshFileListButton = new JButton("Refresh FileList");
+        m_refreshFileListButton.addActionListener(cmActionListener);
+        m_refreshFileListButton.setEnabled(true);
+
+        fileListPanel.add(m_refreshFileListButton);
+        fileListPanel.add(m_fileJList);
+        fileListPanel.setBorder(new TitledBorder("FILE LIST"));
+
+        m_refreshUserListButton = new JButton("Refresh UserList");
+        m_refreshUserListButton.addActionListener(cmActionListener);
+        m_refreshUserListButton.setEnabled(true);
+        userListPanel.add(m_refreshUserListButton);
+        userListPanel.add(m_userJList, BorderLayout.SOUTH);
+        userListPanel.setBorder(new TitledBorder("USER LIST"));
+
+        //JScrollPane scroll = new JScrollPane(m_outTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane scroll = new JScrollPane(m_outTextPane);
+        JScrollPane user_scroll = new JScrollPane(m_fileListPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane file_scroll = new JScrollPane(m_userListPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        add(scroll);
+        userListPanel.add(user_scroll);
+        fileListPanel.add(file_scroll);
+
+        JPanel topButtonPanel = new JPanel();
+        topButtonPanel.setLayout(new FlowLayout());
+
+        add(topButtonPanel, BorderLayout.NORTH);
+
+        JPanel panel = new JPanel();
+        panel.add(fileListPanel, BorderLayout.WEST);
+        panel.add(userListPanel, BorderLayout.EAST);
+        panel.add(m_outTextPane, BorderLayout.SOUTH);
+        add(panel, BorderLayout.CENTER);
+        //pack();
+        setVisible(true);
+
+        /*
         MyKeyListener cmKeyListener = new MyKeyListener();
         MyActionListener cmActionListener = new MyActionListener();
-        /////////기말 내용/////////////////
-        /*
-        file_list = new HashMap<String, Integer>();
-        service = FileSystems.getDefault().newWatchService();
-        server_file_path = m_serverStub.getCMInfo().getConfigurationInfo().getTransferedFileHome();
-        server_file_path.register(service, StandardWatchEventKinds.ENTRY_MODIFY);
-        */
-        //////////////////////////////////
         selectedUser = null;
         setTitle("CM Server");
         setSize(500, 500);
@@ -102,9 +168,7 @@ public class CMServerApp extends JFrame{
         topButtonPanel.add(m_startStopButton);
 
         setVisible(true);
-        m_serverStub = new CMServerStub();
-        m_eventHandler = new CMServerEventHandler(m_serverStub, this);
-        printAllMenus();
+        */
     }
     public CMServerStub getServerStub()   {
         return m_serverStub;
@@ -122,38 +186,6 @@ public class CMServerApp extends JFrame{
 
         //printMsg("Server App terminated");
     }
-    public void file_list_add(String file_name)    {
-        this.file_list.put(file_name, 0);
-    }
-    public boolean file_list_update(String file_name, int modified_file_timestamp)  {
-        if (this.file_list.isEmpty())   {
-            System.out.println("file_list_update error: file_list is empty");
-            return false;
-        }
-        if (!this.file_list.containsKey(file_name)) {
-            System.out.println("file_list_update error: no entry has a file name: " + file_name);
-            return false;
-        }
-        int cur_file_timestamp = this.file_list.get(file_name);
-        if (modified_file_timestamp > cur_file_timestamp) {
-            this.file_list.put(file_name, modified_file_timestamp);
-            return true;
-        }
-        else return false;
-    }
-    //print menus
-    public void printAllMenus() {
-        printMsgln("Print All Menu: "+PRINTALLMENU);
-        printMsgln("====About User====");
-        printMsgln("Print Current Users: "+PRINTCURRENTUSERS);
-        printMsgln("Manage Current Users: "+MANAGECURRENTUSERS);
-        printMsgln("====About File Transfer====");
-        printMsgln("Request File: "+REQUESTFILE);
-        printMsgln("Push File: "+PUSHFILE);
-        printMsgln("====About CM====");
-        printMsgln("Terminate CM: "+TERMINATECM);
-    }
-
     //start/terminate CM
     public void startCM()   {
         //start CM as a default session
@@ -162,8 +194,6 @@ public class CMServerApp extends JFrame{
             System.err.println("CM initialization error!");
             return;
         }
-        m_bRun = true;
-        //startMainSession();
     }
     public void terminateCM()   {
         int option  = JOptionPane.showConfirmDialog(null, "Really Want to Terminate CM?", "[TerminateCM]Confirm", JOptionPane.OK_CANCEL_OPTION);
@@ -295,49 +325,6 @@ public class CMServerApp extends JFrame{
     }
     */
     //about Processing Inputs/Outputs
-    private void processInput(String strText) {
-        int nCommand = -1;
-        try{
-            nCommand = Integer.parseInt(strText);
-        }catch (NumberFormatException e)    {
-            printMsgln("Command Number Error");
-            return;
-        }
-
-        switch (nCommand) {
-            case PRINTALLMENU:
-                printAllMenus();
-                break;
-                /*
-                case STARTCM:
-                    startCM();
-                    break;
-                */
-            case SETFILEPATH:
-                setFilePath();
-                break;
-            case PRINTCURRENTUSERS:
-                printCurrentUsers();
-                break;
-            case MANAGECURRENTUSERS:
-                manageCurrentUsers();
-                break;
-            case TERMINATECM:
-                terminateCM();
-                break;
-            /*
-            case REQUESTFILE:
-                requestFile();
-                break;
-            */
-            case 61:
-                m_serverStub.pushFile("C:\\Users\\Hi\\IdeaProjects\\DistributedSystem\\CM_Maven\\CMApp\\server-file-path\\1\\데이터아키텍처 준전문가 가이드(2020.08.29.).pdf", "2");
-                break;
-
-            default:
-                break;
-        }
-    }
     public void printMsg(String strText) {
         printStyledMsg(strText, null);
     }
@@ -361,24 +348,36 @@ public class CMServerApp extends JFrame{
         printStyledMsg(strText+"\n", strStyleName);
         return;
     }
-
-    //Listener classes
-    public class MyKeyListener implements KeyListener {
-        public void keyPressed(KeyEvent e) {
-            int key = e.getKeyCode();
-            if(key == KeyEvent.VK_ENTER) {
-                JTextField input = (JTextField)e.getSource();
-                String strText = input.getText();
-                printMsg(strText+"\n");
-                processInput(strText);
-                input.setText("");
-                input.requestFocus();
-            }
+    public void refreshUserList()   {
+        DefaultListModel<String> model = new DefaultListModel();
+        CMMember curUserList = this.m_serverStub.getLoginUsers();
+        Iterator<CMUser> iter = curUserList.getAllMembers().iterator();
+        if (curUserList.isEmpty())  {
+            model.addElement("Empty List");
+            this.m_userJList.setModel(model);
+            return;
         }
+        while(iter.hasNext())   {
+            model.addElement(iter.next().getName());
+        }
+        this.m_userJList.setModel(model);
 
-        public void keyReleased(KeyEvent e){}
-        public void keyTyped(KeyEvent e){}
     }
+    public void refreshFileList() throws IOException {
+        DefaultListModel<String> model = new DefaultListModel();
+
+        Path defaultFilePath = this.m_serverStub.getTransferedFileHome();
+        List<Path> result;
+        result = Files.walk(defaultFilePath).collect(Collectors.toList());
+
+        for (Path path:result) {
+            if (path == defaultFilePath)
+                continue;
+            model.addElement(path.toString());
+            m_fileJList.setModel(model);
+        }
+    }
+    //Listener classes
     public class MyActionListener implements ActionListener, ListSelectionListener {
         public void actionPerformed(ActionEvent e) {
             JButton button = (JButton) e.getSource();
@@ -397,7 +396,6 @@ public class CMServerApp extends JFrame{
                 if(CMConfigurator.isDServer(m_serverStub.getCMInfo())) {
                     setTitle("CM Default Server (SERVER)");
                 }
-                m_inTextField.requestFocus();
             }
             else if(button.getText().equals("Stop Server CM")) {
                 // stop cm
@@ -405,6 +403,16 @@ public class CMServerApp extends JFrame{
                 printStyledMsgln("Server CM terminates.\n", "bold");
                 // change button to "start CM"
                 button.setText("Start Server CM");
+            }
+            else if (button.getText().equals("Refresh UserList"))   {
+                refreshUserList();
+            }
+            else if (button.getText().equals("Refresh FileList"))   {
+                try {
+                    refreshFileList();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
             else if (button.getText().equals("LogOut User"))    {
                 CMSessionEvent cse = new CMSessionEvent();
@@ -424,6 +432,7 @@ public class CMServerApp extends JFrame{
 
                     m_serverStub.broadcast(de);
                 }
+
                 else System.out.println("SENDING FAILED MANAGING FAILED");
                 updateGroupUserList();
             }
@@ -439,6 +448,7 @@ public class CMServerApp extends JFrame{
             else if (button.getText().equals("Cancel")) {
                 return;
             }
+
         }
         public void valueChanged(ListSelectionEvent e)  {
             JList list = (JList) e.getSource();
