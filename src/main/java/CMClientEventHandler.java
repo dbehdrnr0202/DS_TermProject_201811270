@@ -124,6 +124,9 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 printMsg("PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
                 send_de.setID(ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
                 m_clientStub.send(send_de, "SERVER");
+                int recvLogicalTime = Integer.parseInt(de.getDummyInfo().split(",")[4]);
+                CMClientApp.FileTimeInfo info = new CMClientApp.FileTimeInfo(0, recvLogicalTime);
+                m_client.fileLogicalClock.put(filename, info);
                 this.processingFileInfo = de.getDummyInfo();
                 break;
             case END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1:

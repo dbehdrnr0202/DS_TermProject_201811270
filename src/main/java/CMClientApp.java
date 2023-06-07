@@ -56,7 +56,7 @@ public class CMClientApp extends JFrame {
     Set<String> filesToDeleteMap;
     Set<String> filesToSendMap;
     private String savedFilePath;
-    public class FileTimeInfo{
+    public static class FileTimeInfo{
         public long lastModifiedTime;
         public int logicalTime;
         public FileTimeInfo(long modifiedTime, int logicalTime) {

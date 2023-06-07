@@ -196,7 +196,8 @@ public class CMServerEventHandler implements CMAppEventHandler {
             case START_PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
                 printMsg("PUSH_FILE_TO_CLIENT_VIA_SERVER_2");
                 send_de.setID(PUSH_FILE_TO_CLIENT_VIA_SERVER_2);
-                send_de.setDummyInfo(filename+","+filePath+","+receiver+","+sender);
+                long logicalTime = fileListMap.get(filename).logicalTime;
+                send_de.setDummyInfo(filename+","+filePath+","+receiver+","+sender+","+logicalTime);
                 m_serverStub.send(send_de, receiver);
                 break;
             case ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2:
