@@ -39,7 +39,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private final int SEND_TIME_INFO = -9;
     private final int SEND_TIME_INFO_MODIFIED = -91;
     private final int SEND_TIME_INFO_NOT_MODIFIED = -92;
-    private final int REQUEST_TIME_INFO = -10;
     private final int REQUEST_DELETE_FILE = -55;
     private final int REQUEST_DELETE_FILE_ACK = -551;
     private final HashMap<String, FileInfo> fileListMap;

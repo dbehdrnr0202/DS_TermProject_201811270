@@ -31,14 +31,6 @@ public class CMClientEventHandler implements CMAppEventHandler {
     private String processingFileInfo;
     private CMClientStub m_clientStub;
     private CMClientApp m_client;
-    public class FileTimeInfo{
-        public long lastModifiedTime;
-        public int logicalTime;
-        public FileTimeInfo(long modifiedTime, int logicalTime) {
-            this.lastModifiedTime = modifiedTime;
-            this.logicalTime = logicalTime;
-        }
-    }
 
     public CMClientEventHandler(CMClientStub stub, CMClientApp client) {
         m_clientStub = stub;
@@ -57,11 +49,6 @@ public class CMClientEventHandler implements CMAppEventHandler {
             case CMInfo.CM_DUMMY_EVENT:
                 processDummyEvent(cme);
                 break;
-            /*
-            case CMInfo.CM_USER_EVENT:
-                processUserEvent(cme);
-                break;
-            */
             case CMInfo.CM_FILE_EVENT:
                 processFileEvent(cme);
                 break;
@@ -155,24 +142,6 @@ public class CMClientEventHandler implements CMAppEventHandler {
         //printMsg("Dummy Sender: "+de.getSender());
         //printMsg("Dummy msg: "+de.getDummyInfo());
     }
-    /*
-    private void processUserEvent(CMEvent cme)  {
-        CMUserEvent ue = (CMUserEvent) cme;
-        switch (ue.getStringID())   {
-            case "userInfo":
-                System.out.println("[USER_EVENT]ID: "+ue.getStringID());
-                String name = ue.getEventField(CMInfo.CM_STR, "name");
-                int age = Integer.parseInt(ue.getEventField(CMInfo.CM_INT, "age"));
-                double weight = Double.parseDouble(ue.getEventField(CMInfo.CM_DOUBLE, "weight"));
-                System.out.println("Field value: name: "+name);
-                System.out.println("Field value: age: "+age);
-                System.out.println("Field value: weight: "+weight);
-                break;
-            default:
-                System.err.println("[USER_EVENT]unknown CMUserEvent ID: "+ue.getStringID());
-        }
-    }
-    */
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
         System.out.println("[processFileEvent]"+fe.getID());

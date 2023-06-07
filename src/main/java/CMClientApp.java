@@ -56,6 +56,11 @@ public class CMClientApp extends JFrame {
     Set<String> filesToDeleteMap;
     Set<String> filesToSendMap;
     private String savedFilePath;
+    private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -1;
+    private final int SEND_TIME_INFO = -9;
+    private final int REQUEST_TIME_INFO = -10;
+    private final int REQUEST_DELETE_FILE = -55;
+
     public static class FileTimeInfo{
         public long lastModifiedTime;
         public int logicalTime;
@@ -64,11 +69,6 @@ public class CMClientApp extends JFrame {
             this.logicalTime = logicalTime;
         }
     }
-    private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -1;
-    private final int SEND_TIME_INFO = -9;
-    private final int REQUEST_TIME_INFO = -10;
-    private final int REQUEST_DELETE_FILE = -55;
-
 
     //private final int
     public CMClientApp(){
