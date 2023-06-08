@@ -356,6 +356,7 @@ public class CMServerApp extends JFrame{
         for (Path path:result) {
             if (path == defaultFilePath)
                 continue;
+            //CMServerEventHandler.FileInfo info = getServerEventHandler().fileListMap.get(path.getFileName().toString());
             model.addElement(path.toString());
             m_fileJList.setModel(model);
         }

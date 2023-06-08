@@ -64,8 +64,9 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 printMsg("SEND_TIME_INFO_NOT_MODIFIED");
                 printMsg("서버의 파일의 정보이 더 최신이라 client의 clock을 갱신함");
                 String recvFileName = de.getDummyInfo().split(",")[0];
-                int recvLogicalClock = Integer.parseInt(de.getDummyInfo().split(",")[1]);
-                m_clientStub.requestFile(recvFileName, "SERVER");
+                String srecvLogicalClock = de.getDummyInfo().split(",")[1];
+                int recvLogicalClock = Integer.parseInt(srecvLogicalClock);
+                m_clientStub.requestFile(recvFileName, "SERVER", CMInfo.FILE_OVERWRITE);
                 this.m_client.fileLogicalClock2.put(recvFileName, recvLogicalClock);
                 return;
             case REQUEST_DELETE_FILE_ACK:

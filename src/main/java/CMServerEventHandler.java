@@ -34,10 +34,10 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private final int REQUEST_TIME_INFO = -1000;
     private final int REQUEST_DELETE_FILE = -550;
     private final int REQUEST_DELETE_FILE_ACK = -551;
-    private final HashMap<String, FileInfo> fileListMap;
+    public final HashMap<String, FileInfo> fileListMap;
     private boolean isProccessingFile2;
     private String viaTranferFileInfo;
-    public class FileInfo {
+    public static class FileInfo {
         public int logicalTime;
         public ArrayList<String> users;
         public FileInfo(int logicalTime, ArrayList<String> users)    {
@@ -124,7 +124,7 @@ public class CMServerEventHandler implements CMAppEventHandler {
                         else {
                             send_de.setID(SEND_TIME_INFO_NOT_MODIFIED);
                             FileInfo savedFileInfo = this.fileListMap.get(recvFileName);
-                            send_de.setDummyInfo(recvFileName+","+savedFileInfo);
+                            send_de.setDummyInfo(recvFileName+","+savedFileInfo.logicalTime);
                         }
                     }
                     //clock 정보가 없을 경우(처음으로 받는 정보)
