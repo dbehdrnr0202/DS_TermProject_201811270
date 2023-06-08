@@ -183,8 +183,6 @@ public class CMServerApp extends JFrame{
         CMServerStub cmStub = server.getServerStub();
         cmStub.setAppEventHandler(server.getServerEventHandler());
         server.startCM();
-
-        //printMsg("Server App terminated");
     }
     //start/terminate CM
     public void startCM()   {
@@ -389,19 +387,15 @@ public class CMServerApp extends JFrame{
                 else {
                     printStyledMsg("Server CM starts.\n", "bold");
                     printMsg("Type 0 for menu.\n");
-                    // change button to "stop CM"
                     button.setText("Stop Server CM");
                 }
-                // check if default server or not
                 if(CMConfigurator.isDServer(m_serverStub.getCMInfo())) {
                     setTitle("CM Default Server (SERVER)");
                 }
             }
             else if(button.getText().equals("Stop Server CM")) {
-                // stop cm
                 m_serverStub.terminateCM();
                 printStyledMsgln("Server CM terminates.\n", "bold");
-                // change button to "start CM"
                 button.setText("Start Server CM");
             }
             else if (button.getText().equals("Refresh UserList"))   {
