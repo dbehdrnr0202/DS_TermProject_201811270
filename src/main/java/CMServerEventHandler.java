@@ -94,6 +94,7 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 printMsg("REQUEST_DELETE_FILE");
                 printMsg("Start to Delete File: "+filename+" in user["+de.getSender()+"]");
                 Files.delete(pFilePath);
+                fileListMap.remove(filename);
                 send_de.setSender("SERVER");
                 send_de.setReceiver(de.getSender());
                 send_de.setID(REQUEST_DELETE_FILE_ACK);

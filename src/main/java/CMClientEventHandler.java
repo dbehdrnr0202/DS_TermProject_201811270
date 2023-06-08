@@ -58,7 +58,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 printMsg("SEND_TIME_INFO_MODIFIED");
                 printMsg("서버가 내 파일의 정보로 갱신함");
                 String filepath = m_clientStub.getTransferedFileHome()+"\\"+de.getDummyInfo().split(",")[0];
-                m_clientStub.pushFile(filepath, "SERVER");
+                m_clientStub.pushFile(filepath, "SERVER", CMInfo.FILE_OVERWRITE);
                 return;
             case SEND_TIME_INFO_NOT_MODIFIED:
                 printMsg("SEND_TIME_INFO_NOT_MODIFIED");
