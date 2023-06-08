@@ -1,13 +1,8 @@
-import kr.ac.konkuk.ccslab.cm.entity.CMSessionInfo;
 import kr.ac.konkuk.ccslab.cm.event.handler.CMAppEventHandler;
-import kr.ac.konkuk.ccslab.cm.event.handler.CMEventHandler;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 import kr.ac.konkuk.ccslab.cm.info.*;
 import kr.ac.konkuk.ccslab.cm.event.*;
-import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
-import java.nio.file.Path;
-import java.util.Iterator;
 
 public class CMClientEventHandler implements CMAppEventHandler {
     private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -11;
@@ -78,7 +73,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 printMsg("SERVER deleted file: "+de.getDummyInfo());
                 m_client.filesToDeleteMap.remove(de.getDummyInfo());
                 return;
-            default://file transfer via server event
+            default:
                 break;
         }
     }
@@ -206,7 +201,8 @@ public class CMClientEventHandler implements CMAppEventHandler {
                     m_client.printMsgln("First. User[" + m_clientStub.getMyself().getName() + "] Successed to push File[" + processingFileInfo.split(",")[0] + "] to [Default Server]");
                 }
                 printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from "+fe.getFileSender());
-                printMsg("========START to send END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
+                if (isProccessingFile==true)
+                    printMsg("========START to send END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1");
                 break;
             default:
                 break;

@@ -13,17 +13,12 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.text.*;
 import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.*;
-import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,22 +29,12 @@ public class CMServerApp extends JFrame{
     private JTextPane m_outTextPane;
     private JTextPane m_fileListPane;
     private JTextPane m_userListPane;
-    private JButton m_startStopButton;
     private JButton m_refreshUserListButton;
     private JButton m_refreshFileListButton;
     private JList curGroupUserList;
     private JList m_userJList;
     private JList m_fileJList;
     private String selectedUser = null;
-    private final int PRINTALLMENU = 0;
-    private final int TERMINATECM = 9;
-    private final int PRINTCURRENTUSERS = 3;
-    private final int MANAGECURRENTUSERS = 31;
-
-    private final int SETFILEPATH = 4;
-    private final int PUSHFILE = 61;
-    private final int REQUESTFILE = 60;
-    //파일명, timestamp pair의 hashmap
 
     public CMServerApp() throws IOException {
         makeUI();
@@ -375,7 +360,6 @@ public class CMServerApp extends JFrame{
             m_fileJList.setModel(model);
         }
     }
-    //Listener classes
     public class MyActionListener implements ActionListener, ListSelectionListener {
         public void actionPerformed(ActionEvent e) {
             JButton button = (JButton) e.getSource();
@@ -386,7 +370,6 @@ public class CMServerApp extends JFrame{
                     printStyledMsg("CM initialization error!\n", "bold");
                 else {
                     printStyledMsg("Server CM starts.\n", "bold");
-                    printMsg("Type 0 for menu.\n");
                     button.setText("Stop Server CM");
                 }
                 if(CMConfigurator.isDServer(m_serverStub.getCMInfo())) {

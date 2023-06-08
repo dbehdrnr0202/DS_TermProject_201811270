@@ -1,15 +1,9 @@
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
 import kr.ac.konkuk.ccslab.cm.entity.CMUser;
 import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
-import kr.ac.konkuk.ccslab.cm.event.CMEvent;
-import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
 import kr.ac.konkuk.ccslab.cm.info.CMInfo;
-import kr.ac.konkuk.ccslab.cm.manager.CMCommManager;
-import kr.ac.konkuk.ccslab.cm.manager.CMConfigurator;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
-import kr.ac.konkuk.ccslab.cm.manager.CMFileTransferManager;
 
-import javax.imageio.IIOException;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
@@ -18,15 +12,9 @@ import javax.swing.text.*;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
-import java.awt.desktop.AboutHandler;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.io.BufferedReader;
-import java.io.Console;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.io.File;
@@ -35,7 +23,6 @@ import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class CMClientApp extends JFrame {
     private CMClientStub m_clientStub;

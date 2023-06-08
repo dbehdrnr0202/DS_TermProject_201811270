@@ -1,25 +1,17 @@
 
-import kr.ac.konkuk.ccslab.cm.entity.CMSessionInfo;
 import kr.ac.konkuk.ccslab.cm.event.*;
 import kr.ac.konkuk.ccslab.cm.info.*;
 import kr.ac.konkuk.ccslab.cm.manager.CMDBManager;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 import kr.ac.konkuk.ccslab.cm.event.handler.CMAppEventHandler;
-import org.apache.commons.math3.util.Pair;
-
-import javax.swing.text.BadLocationException;
-import javax.swing.text.StyledDocument;
-import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
+
+
 
 public class CMServerEventHandler implements CMAppEventHandler {
     private CMServerStub m_serverStub;
@@ -127,7 +119,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
 
                             send_de.setID(SEND_TIME_INFO_MODIFIED);
                             send_de.setDummyInfo(recvFileName+","+recvLogicalTime);
-                            //m_serverStub.requestFile(recvFileName, de.getSender());
                         }
                         //conflict 발생함 -> NO 라고 답변해야함
                         else {
@@ -257,7 +248,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
         switch (fe.getID()) {
             case CMFileEvent.REQUEST_PERMIT_PUSH_FILE:
                 printMsg("REQUEST_PERMIT_PUSH_FILE");
-                //printMsg("User["+fe.getFileSender()+"] Requests to Permit Push File["+fe.getFileName()+"]");
                 rtn = m_serverStub.replyEvent(fe, 1);
                 if (rtn) {
                     System.out.println("Server Accepted to Permit PUSH FILE");
@@ -276,7 +266,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
             case CMFileEvent.REPLY_PERMIT_PUSH_FILE:
                 printMsg("REPLY_PERMIT_PUSH_FILE");
-                //2번에서 이걸 받고 나서 왜 START_FILE_TRANSFER을 안 하지?
                 fe.setReceiver(fe.getFileReceiver());
                 fe.setSender(fe.getFileSender());
                 if(fe.getReturnCode() == 0) {
@@ -289,7 +278,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 printMsg("START_FILE_TRANSFER");
                 rtn = m_serverStub.replyEvent(fe, 1);
                 System.out.println(rtn);
-                //printMsg("[FILE_EVENT]"+fe.getFileSender()+" is about to send file("+fe.getFileName()+").");
                 break;
             case CMFileEvent.END_FILE_TRANSFER:
             //case CMFileEvent.END_FILE_TRANSFER_CHAN:
@@ -299,7 +287,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 String filename = fe.getFileName();
                 String receiver = fe.getFileReceiver();
                 String sender = fe.getFileSender();
-                //printMsg("[FILE_EVENT]"+fe.getFileSender()+" completes to send file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) to "+fe.getFileReceiver());
                 break;
             case CMFileEvent.END_FILE_TRANSFER_ACK:
                 printMsg("END_FILE_TRANSFER_ACK");
@@ -314,8 +301,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                     m_serverStub.send(send_de, receiver);
                 }
                 break;
-            //case CMFileEvent.END_FILE_TRANSFER_CHAN_ACK:
-                //printMsg("[FILE_EVENT]"+fe.getFileReceiver()+" completes to receive file(" +fe.getFileName()+", "+fe.getFileSize()+" Bytes) from "+fe.getFileSender());
             default:
                 break;
         }
@@ -328,7 +313,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
             case CMSessionEvent.LOGIN:
                 printMsg("["+se.getUserName()+"] requests login.");
 
-                //여기서 cm-server.conf에서 SESSION_SCHEME 0으로 설정했다.=> No authorization
                 if (confInfo.isLoginScheme())   {
                     boolean ret = CMDBManager.authenticateUser(se.getUserName(), se.getPassword(), m_serverStub.getCMInfo());
                     if (!ret)   {
@@ -342,7 +326,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 }
                 else {
                     System.out.println("SESSION_SCHEME IS 0, NO LOGIN SCHEME");
-                    //printMsg("["+se.getUserName()+"] login succeeded");
                 }
                 break;
             case CMSessionEvent.LOGOUT:
