@@ -29,17 +29,18 @@ public class CMServerEventHandler implements CMAppEventHandler {
     private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -2;
     private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -21;
     private final int START_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -22;
-
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER = -3;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER = -31;
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -4;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
-    private final int SEND_TIME_INFO = -9;
-    private final int SEND_TIME_INFO_MODIFIED = -91;
-    private final int SEND_TIME_INFO_NOT_MODIFIED = -92;
-    private final int REQUEST_DELETE_FILE = -55;
+
+    private final int SEND_TIME_INFO = -109;
+    private final int SEND_TIME_INFO_MODIFIED = -1091;
+    private final int SEND_TIME_INFO_NOT_MODIFIED = -1092;
+    private final int REQUEST_TIME_INFO = -1000;
+    private final int REQUEST_DELETE_FILE = -550;
     private final int REQUEST_DELETE_FILE_ACK = -551;
     private final HashMap<String, FileInfo> fileListMap;
     private boolean isProccessingFile2;
@@ -82,12 +83,19 @@ public class CMServerEventHandler implements CMAppEventHandler {
 
     private void processDummyEvent(CMEvent cme) throws InterruptedException, IOException {
         CMDummyEvent de = (CMDummyEvent) cme;
+        //Time stamp 관련
+        int eventId = de.getID();
+        if (eventId<-100)
+            processTimeEvent(de);
+        else
+            processPushFileViaServer(de);
+    }
+
+    private  void processTimeEvent(CMDummyEvent de) throws IOException {
         CMDummyEvent send_de = new CMDummyEvent();
         send_de.setType(CMInfo.CM_DUMMY_EVENT);
         String filePath = m_serverStub.getTransferedFileHome().toString();
-        //Time stamp 관련
-        int eventId = de.getID();
-        switch (eventId)    {
+        switch (de.getID())    {
             case REQUEST_DELETE_FILE:
                 String filename = de.getDummyInfo();
                 Path pFilePath = Paths.get(filePath+"\\"+de.getSender()+"\\"+filename);;
@@ -154,12 +162,17 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
         }
 
+    }
+    private  void processPushFileViaServer(CMDummyEvent de) {
+        CMDummyEvent send_de = new CMDummyEvent();
+        send_de.setType(CMInfo.CM_DUMMY_EVENT);
+        String filePath = m_serverStub.getTransferedFileHome().toString();
         String filename = de.getDummyInfo().split(",")[0];
         String receiver = de.getDummyInfo().split(",")[2];
         String fileSender =de.getDummyInfo().split(",")[3];
         filePath = m_serverStub.getTransferedFileHome().toString()+"\\"+fileSender+"\\"+filename;
         String sender = de.getSender();
-        switch (eventId) {
+        switch (de.getID()) {
             case PUSH_FILE_TO_CLIENT_VIA_SERVER_1:
                 this.viaTranferFileInfo = de.getDummyInfo();
                 //이미 있던거
@@ -237,7 +250,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
                 break;
         }
     }
-
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
         System.out.println("[processFileEvent]"+fe.getID());

@@ -57,9 +57,23 @@ public class CMClientApp extends JFrame {
     Set<String> filesToSendMap;
     private String savedFilePath;
     private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -1;
-    private final int SEND_TIME_INFO = -9;
-    private final int REQUEST_TIME_INFO = -10;
-    private final int REQUEST_DELETE_FILE = -55;
+    private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -11;
+    private final int PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -2;
+    private final int ACK_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -21;
+    private final int START_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -22;
+    private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER = -3;
+    private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER = -31;
+    private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -4;
+    private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
+    private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
+    private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
+
+    private final int SEND_TIME_INFO = -109;
+    private final int SEND_TIME_INFO_MODIFIED = -1091;
+    private final int SEND_TIME_INFO_NOT_MODIFIED = -1092;
+    private final int REQUEST_TIME_INFO = -1000;
+    private final int REQUEST_DELETE_FILE = -550;
+    private final int REQUEST_DELETE_FILE_ACK = -551;
 
     public static class FileTimeInfo{
         public long lastModifiedTime;
@@ -433,10 +447,12 @@ public class CMClientApp extends JFrame {
                 String fileSender = m_clientStub.getMyself().getName();
                 long modifiedTime = file.lastModified();
                 int logicalTime = 0;
+                if (this.fileLogicalClock.get(filename)!=null)
+                    logicalTime = this.fileLogicalClock.get(file).logicalTime;
                 CMDummyEvent request_de = new CMDummyEvent();
                 request_de.setType(CMInfo.CM_DUMMY_EVENT);
                 request_de.setID(PUSH_FILE_TO_CLIENT_VIA_SERVER_1);
-                request_de.setDummyInfo(filename+","+filePath+","+strReceiver+","+fileSender+","+modifiedTime+","+logicalTime);
+                request_de.setDummyInfo(filename+","+filePath+","+strReceiver+","+fileSender+","+logicalTime);
                 request_de.setSender(m_clientStub.getMyself().getName());
                 FileTimeInfo timeInfo = new FileTimeInfo(modifiedTime, logicalTime);
                 fileLogicalClock.put(filename, timeInfo);

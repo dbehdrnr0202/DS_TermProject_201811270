@@ -20,11 +20,11 @@ public class CMClientEventHandler implements CMAppEventHandler {
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_1 = -41;
     private final int END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -5;
     private final int ACK_END_PUSH_FILE_TO_CLIENT_VIA_SERVER_2 = -51;
-    private final int SEND_TIME_INFO = -9;
-    private final int SEND_TIME_INFO_MODIFIED = -91;
-    private final int SEND_TIME_INFO_NOT_MODIFIED = -92;
-    private final int REQUEST_TIME_INFO = -10;
-    private final int REQUEST_DELETE_FILE = -55;
+    private final int SEND_TIME_INFO = -109;
+    private final int SEND_TIME_INFO_MODIFIED = -1091;
+    private final int SEND_TIME_INFO_NOT_MODIFIED = -1092;
+    private final int REQUEST_TIME_INFO = -1000;
+    private final int REQUEST_DELETE_FILE = -550;
     private final int REQUEST_DELETE_FILE_ACK = -551;
     private boolean isProccessingFile;
 
@@ -56,9 +56,7 @@ public class CMClientEventHandler implements CMAppEventHandler {
                 return;
         }
     }
-
-    private void processDummyEvent(CMEvent cme) {
-        CMDummyEvent de = (CMDummyEvent) cme;
+    private  void processTimeEvent(CMDummyEvent de) {
         int eventId = de.getID();
         switch (eventId)    {
             case SEND_TIME_INFO_MODIFIED:
@@ -83,6 +81,8 @@ public class CMClientEventHandler implements CMAppEventHandler {
             default://file transfer via server event
                 break;
         }
+    }
+    private  void processPushFileViaServer(CMDummyEvent de) {
         CMDummyEvent send_de = new CMDummyEvent();
         send_de.setType(CMInfo.CM_DUMMY_EVENT);
         System.out.println("[processDummyEvent]");
@@ -137,10 +137,13 @@ public class CMClientEventHandler implements CMAppEventHandler {
             default:
                 break;
         }
-        //printMsg(de.getHandlerSession()+", "+de.getHandlerGroup());
-
-        //printMsg("Dummy Sender: "+de.getSender());
-        //printMsg("Dummy msg: "+de.getDummyInfo());
+    }
+    private void processDummyEvent(CMEvent cme) {
+        CMDummyEvent de = (CMDummyEvent) cme;
+        if (de.getID()< (-100))
+            processTimeEvent(de);
+        else
+            processPushFileViaServer(de);
     }
     private void processFileEvent(CMEvent cme)  {
         CMFileEvent fe = (CMFileEvent) cme;
